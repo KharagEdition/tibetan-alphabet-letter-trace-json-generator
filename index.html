@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tibetan Alphabet Path Recorder</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tibetan:wght@700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: #f0f4ff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  touch-action: none;
+  user-select: none;
+}
+h1 { font-size: 1.2rem; font-weight: 900; color: #1a2a4a; margin: 8px 0 2px; text-align: center; }
+.sub { font-size: 0.78rem; color: #6a7a9a; margin-bottom: 12px; text-align: center; }
+
+/* Letter selector */
+.letter-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  max-width: 420px;
+  margin-bottom: 12px;
+}
+.lbtn {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  border: 2px solid #dde3f5;
+  background: white;
+  font-size: 1.2rem;
+  font-family: 'Noto Serif Tibetan', serif;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  color: #2a3a6a;
+  position: relative;
+}
+.lbtn:hover { border-color: #5b8dd9; transform: translateY(-2px); }
+.lbtn.active { border-color: #e07b39; background: #fff4eb; }
+.lbtn.saved  { border-color: #3bbf7a; background: #edfaf4; }
+.lbtn.saved::after {
+  content: '✓';
+  position: absolute;
+  top: -5px; right: -5px;
+  background: #3bbf7a;
+  color: white;
+  font-size: 9px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: sans-serif;
+  font-weight: 900;
+}
+
+.card {
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 6px 32px rgba(0,0,0,0.10);
+  padding: 16px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.letter-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.letter-preview {
+  font-size: 2.2rem;
+  font-family: 'Noto Serif Tibetan', serif;
+  color: #2a3a6a;
+  width: 52px; height: 52px;
+  background: #f0f4ff;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.letter-meta { flex: 1; }
+.letter-meta strong { font-size: 1rem; color: #1a2a4a; }
+.letter-meta span { font-size: 0.78rem; color: #6a7a9a; display: block; }
+.stroke-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f0f4ff;
+  color: #5a6a9a;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+
+#canvasWrap {
+  position: relative;
+  width: 340px; height: 340px;
+  border-radius: 16px;
+  background: #fafbff;
+  border: 2px solid #dde3f5;
+  touch-action: none;
+  cursor: crosshair;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+#bgCanvas, #drawCanvas {
+  position: absolute; top: 0; left: 0;
+  width: 340px; height: 340px;
+}
+
+.stroke-info {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+}
+.stroke-badge {
+  font-size: 0.78rem; font-weight: 900;
+  padding: 4px 12px; border-radius: 99px;
+  color: white; min-width: 80px; text-align: center;
+}
+
+.btn-row { display: flex; gap: 7px; width: 100%; flex-wrap: wrap; }
+.btn {
+  flex: 1; padding: 9px 6px;
+  border-radius: 12px; border: none;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem; font-weight: 900;
+  cursor: pointer; transition: transform 0.15s;
+  min-width: 60px;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-undo   { background: #fdebd0; color: #8a5020; }
+.btn-clear  { background: #fde0e0; color: #9a2020; }
+.btn-next   { background: #4a90d9; color: white; }
+.btn-save   { background: #3bbf7a; color: white; }
+.btn-export { background: #2a3a6a; color: white; font-size: 0.88rem; }
+
+/* Strokes list */
+.strokes-list { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.stroke-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.78rem; color: #5a6a8a; font-weight: 700;
+  background: #f8f9ff; border-radius: 8px; padding: 5px 10px;
+}
+.s-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.s-pts { margin-left: auto; color: #9aa0b8; font-size: 0.72rem; }
+.s-del {
+  margin-left: 4px; background: #fde0e0; border: none;
+  color: #c02020; border-radius: 6px; padding: 1px 6px;
+  font-size: 0.7rem; font-weight: 900; cursor: pointer;
+}
+
+/* Export area */
+#exportSection { width: 100%; display: none; flex-direction: column; gap: 8px; }
+#outputBox {
+  width: 100%; font-family: monospace; font-size: 0.68rem;
+  background: #1a1e2e; color: #a0e8b0;
+  border-radius: 10px; padding: 10px; border: none;
+  resize: vertical; min-height: 100px;
+}
+.copy-btn {
+  width: 100%; padding: 10px; border-radius: 12px; border: none;
+  background: #2a9a60; color: white;
+  font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Progress summary */
+.progress-summary {
+  font-size: 0.78rem; color: #6a7a9a; font-weight: 700; text-align: center;
+}
+</style>
+</head>
+<body>
+
+<h1>Tibetan Alphabet Path Recorder</h1>
+<div class="sub">Select a letter → draw its strokes → Save → move to next</div>
+
+<div class="letter-nav" id="letterNav"></div>
+
+<div class="card">
+  <div class="letter-header">
+    <div class="letter-preview" id="letterPreview">ཀ</div>
+    <div class="letter-meta">
+      <strong id="letterName">Ka</strong>
+      <span id="letterDesc">1st consonant</span>
+    </div>
+    <div class="stroke-count" id="strokeCount">0 strokes</div>
+  </div>
+
+  <div id="canvasWrap">
+    <canvas id="bgCanvas" width="340" height="340"></canvas>
+    <canvas id="drawCanvas" width="340" height="340"></canvas>
+  </div>
+
+  <div class="stroke-info">
+    <div class="stroke-badge" id="strokeBadge" style="background:#e07b39">Stroke 1</div>
+    <span style="font-size:0.78rem;color:#6a7a9a;font-weight:700" id="strokeHint">Draw the first stroke</span>
+  </div>
+
+  <div class="strokes-list" id="strokesList"></div>
+
+  <div class="btn-row">
+    <button class="btn btn-undo"  onclick="undoPoint()">↩ Undo</button>
+    <button class="btn btn-clear" onclick="clearCurrent()">🗑 Clear</button>
+    <button class="btn btn-next"  onclick="nextStroke()">＋ Add Stroke</button>
+    <button class="btn btn-save"  onclick="saveLetter()">💾 Save Letter</button>
+  </div>
+
+  <div class="progress-summary" id="progressSummary">0 / 30 letters saved</div>
+
+  <button class="btn btn-export" style="width:100%;padding:12px" onclick="exportAll()">📦 Export All JSON</button>
+
+  <div id="exportSection">
+    <textarea id="outputBox" readonly></textarea>
+    <button class="copy-btn" onclick="copyAll()">📋 Copy JSON</button>
+  </div>
+</div>
+
+<script>
+const ALPHABET = [
+  { char:'ཀ', name:'Ka',   desc:'1st consonant' },
+  { char:'ཁ', name:'Kha',  desc:'2nd consonant' },
+  { char:'ག', name:'Ga',   desc:'3rd consonant' },
+  { char:'ང', name:'Nga',  desc:'4th consonant' },
+  { char:'ཅ', name:'Ca',   desc:'5th consonant' },
+  { char:'ཆ', name:'Cha',  desc:'6th consonant' },
+  { char:'ཇ', name:'Ja',   desc:'7th consonant' },
+  { char:'ཉ', name:'Nya',  desc:'8th consonant' },
+  { char:'ཏ', name:'Ta',   desc:'9th consonant' },
+  { char:'ཐ', name:'Tha',  desc:'10th consonant' },
+  { char:'ད', name:'Da',   desc:'11th consonant' },
+  { char:'ན', name:'Na',   desc:'12th consonant' },
+  { char:'པ', name:'Pa',   desc:'13th consonant' },
+  { char:'ཕ', name:'Pha',  desc:'14th consonant' },
+  { char:'བ', name:'Ba',   desc:'15th consonant' },
+  { char:'མ', name:'Ma',   desc:'16th consonant' },
+  { char:'ཙ', name:'Tsa',  desc:'17th consonant' },
+  { char:'ཚ', name:'Tsha', desc:'18th consonant' },
+  { char:'ཛ', name:'Dza',  desc:'19th consonant' },
+  { char:'ཝ', name:'Wa',   desc:'20th consonant' },
+  { char:'ཞ', name:'Zha',  desc:'21st consonant' },
+  { char:'ཟ', name:'Za',   desc:'22nd consonant' },
+  { char:'འ', name:"'A",   desc:'23rd consonant' },
+  { char:'ཡ', name:'Ya',   desc:'24th consonant' },
+  { char:'ར', name:'Ra',   desc:'25th consonant' },
+  { char:'ལ', name:'La',   desc:'26th consonant' },
+  { char:'ཤ', name:'Sha',  desc:'27th consonant' },
+  { char:'ས', name:'Sa',   desc:'28th consonant' },
+  { char:'ཧ', name:'Ha',   desc:'29th consonant' },
+  { char:'ཨ', name:'A',    desc:'30th consonant' },
+];
+
+const COLORS = ['#e07b39','#5b8dd9','#3bbf7a','#e05080','#9b59b6','#e8c820','#20c8c8','#c86020'];
+const SIZE = 340;
+const MIN_DIST = 8;
+
+// Storage: { charIndex: [ {color, points:[]} ] }
+let savedData = {};
+// Try load from localStorage
+try {
+  const stored = localStorage.getItem('tibetan_paths');
+  if (stored) savedData = JSON.parse(stored);
+} catch(e) {}
+
+let currentLetterIdx = 0;
+let strokes = [];        // completed strokes for current letter
+let currentStroke = [];  // in-progress stroke
+let isDrawing = false;
+let lastPt = null;
+
+const bgCanvas   = document.getElementById('bgCanvas');
+const drawCanvas = document.getElementById('drawCanvas');
+const bc = bgCanvas.getContext('2d');
+const dc = drawCanvas.getContext('2d');
+const wrap = document.getElementById('canvasWrap');
+
+// ── Build letter nav ───────────────────────────────────────────────────────
+function buildNav() {
+  const nav = document.getElementById('letterNav');
+  nav.innerHTML = '';
+  ALPHABET.forEach((l, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'lbtn' + (i === currentLetterIdx ? ' active' : '') + (savedData[i] ? ' saved' : '');
+    btn.textContent = l.char;
+    btn.title = l.name;
+    btn.onclick = () => selectLetter(i);
+    btn.id = `lbtn-${i}`;
+    nav.appendChild(btn);
+  });
+}
+
+function selectLetter(idx) {
+  // auto-save current if has strokes
+  if (strokes.length > 0 || currentStroke.length > 1) {
+    if (confirm(`Save current strokes for ${ALPHABET[currentLetterIdx].char} before switching?`)) {
+      doSave();
+    }
+  }
+  currentLetterIdx = idx;
+  // load saved strokes if any
+  strokes = savedData[idx] ? savedData[idx].map(s => ({...s, points:[...s.points]})) : [];
+  currentStroke = [];
+  lastPt = null;
+  updateNav();
+  updateHeader();
+  drawBg();
+  redrawAll();
+  updateStrokesList();
+  updateStrokeInfo();
+}
+
+function updateNav() {
+  document.querySelectorAll('.lbtn').forEach((b, i) => {
+    b.className = 'lbtn' + (i === currentLetterIdx ? ' active' : '') + (savedData[i] ? ' saved' : '');
+  });
+}
+
+function updateHeader() {
+  const l = ALPHABET[currentLetterIdx];
+  document.getElementById('letterPreview').textContent = l.char;
+  document.getElementById('letterName').textContent = l.name;
+  document.getElementById('letterDesc').textContent = l.desc;
+  const total = Object.keys(savedData).length;
+  document.getElementById('progressSummary').textContent = `${total} / ${ALPHABET.length} letters saved`;
+}
+
+// ── Draw background ───────────────────────────────────────────────────────
+function drawBg() {
+  bc.clearRect(0, 0, SIZE, SIZE);
+  // grid
+  bc.strokeStyle = '#e8ecf8';
+  bc.lineWidth = 1;
+  bc.setLineDash([4,6]);
+  [85,170,255].forEach(v => {
+    bc.beginPath(); bc.moveTo(v,0); bc.lineTo(v,SIZE); bc.stroke();
+    bc.beginPath(); bc.moveTo(0,v); bc.lineTo(SIZE,v); bc.stroke();
+  });
+  bc.setLineDash([]);
+  // center cross
+  bc.strokeStyle = '#c8d0ee';
+  bc.lineWidth = 1;
+  bc.beginPath(); bc.moveTo(170,0); bc.lineTo(170,SIZE); bc.stroke();
+  bc.beginPath(); bc.moveTo(0,170); bc.lineTo(SIZE,170); bc.stroke();
+
+  // ghost letter
+  bc.font = `700 230px "Noto Serif Tibetan", serif`;
+  bc.textAlign = 'center';
+  bc.textBaseline = 'middle';
+  bc.fillStyle = 'rgba(40,60,120,0.10)';
+  bc.fillText(ALPHABET[currentLetterIdx].char, SIZE/2, SIZE/2 + 10);
+  bc.strokeStyle = 'rgba(40,60,120,0.14)';
+  bc.lineWidth = 1;
+  bc.strokeText(ALPHABET[currentLetterIdx].char, SIZE/2, SIZE/2 + 10);
+}
+
+// ── Redraw strokes ─────────────────────────────────────────────────────────
+function redrawAll() {
+  dc.clearRect(0, 0, SIZE, SIZE);
+
+  // Completed strokes
+  strokes.forEach((s, si) => {
+    const pts = s.points;
+    if (pts.length < 1) return;
+    if (pts.length >= 2) {
+      dc.beginPath();
+      dc.moveTo(pts[0].x, pts[0].y);
+      pts.forEach(p => dc.lineTo(p.x, p.y));
+      dc.strokeStyle = s.color;
+      dc.lineWidth = 5;
+      dc.lineCap = 'round';
+      dc.lineJoin = 'round';
+      dc.stroke();
+    }
+    pts.forEach((p, pi) => {
+      dc.beginPath();
+      dc.arc(p.x, p.y, pi===0 ? 8 : 4, 0, Math.PI*2);
+      dc.fillStyle = s.color;
+      dc.fill();
+      if (pi === 0) {
+        dc.font = 'bold 9px Nunito,sans-serif';
+        dc.fillStyle = 'white';
+        dc.textAlign = 'center';
+        dc.textBaseline = 'middle';
+        dc.fillText(si+1, p.x, p.y);
+      }
+    });
+  });
+
+  // Current in-progress
+  if (currentStroke.length > 0) {
+    const col = COLORS[strokes.length % COLORS.length];
+    if (currentStroke.length >= 2) {
+      dc.beginPath();
+      dc.moveTo(currentStroke[0].x, currentStroke[0].y);
+      currentStroke.forEach(p => dc.lineTo(p.x, p.y));
+      dc.strokeStyle = col;
+      dc.lineWidth = 5;
+      dc.lineCap = 'round';
+      dc.lineJoin = 'round';
+      dc.globalAlpha = 0.65;
+      dc.stroke();
+      dc.globalAlpha = 1;
+    }
+    currentStroke.forEach((p, pi) => {
+      dc.beginPath();
+      dc.arc(p.x, p.y, pi===0 ? 8 : 4, 0, Math.PI*2);
+      dc.fillStyle = col;
+      dc.globalAlpha = 0.65;
+      dc.fill();
+      dc.globalAlpha = 1;
+    });
+  }
+}
+
+// ── Input ──────────────────────────────────────────────────────────────────
+function getPos(e) {
+  const rect = wrap.getBoundingClientRect();
+  const sx = SIZE/rect.width, sy = SIZE/rect.height;
+  const src = e.touches ? e.touches[0] : e;
+  return {
+    x: Math.round((src.clientX - rect.left) * sx),
+    y: Math.round((src.clientY - rect.top) * sy)
+  };
+}
+
+function recordPt(pos) {
+  if (lastPt) {
+    const dx = pos.x-lastPt.x, dy = pos.y-lastPt.y;
+    if (Math.sqrt(dx*dx+dy*dy) < MIN_DIST) return;
+  }
+  currentStroke.push({x:pos.x, y:pos.y});
+  lastPt = pos;
+  redrawAll();
+  updateStrokeInfo();
+}
+
+wrap.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  wrap.setPointerCapture(e.pointerId);
+  isDrawing = true;
+  lastPt = null;
+  const pos = getPos(e);
+  currentStroke.push(pos);
+  lastPt = pos;
+  redrawAll();
+});
+wrap.addEventListener('pointermove', e => {
+  if (!isDrawing) return;
+  e.preventDefault();
+  recordPt(getPos(e));
+});
+wrap.addEventListener('pointerup',    () => { isDrawing = false; });
+wrap.addEventListener('pointercancel',() => { isDrawing = false; });
+
+// ── Controls ───────────────────────────────────────────────────────────────
+function undoPoint() {
+  if (currentStroke.length > 0) {
+    currentStroke.pop();
+    lastPt = currentStroke[currentStroke.length-1] || null;
+  } else if (strokes.length > 0) {
+    const last = strokes.pop();
+    currentStroke = [...last.points];
+    currentStroke.pop();
+    lastPt = currentStroke[currentStroke.length-1] || null;
+    updateStrokesList();
+  }
+  redrawAll();
+  updateStrokeInfo();
+}
+
+function clearCurrent() {
+  currentStroke = [];
+  lastPt = null;
+  redrawAll();
+  updateStrokeInfo();
+}
+
+function nextStroke() {
+  if (currentStroke.length < 2) { alert('Draw at least 2 points first!'); return; }
+  const col = COLORS[strokes.length % COLORS.length];
+  strokes.push({ color: col, points: [...currentStroke] });
+  currentStroke = [];
+  lastPt = null;
+  updateStrokesList();
+  updateStrokeInfo();
+  redrawAll();
+}
+
+function updateStrokeInfo() {
+  const si = strokes.length;
+  const col = COLORS[si % COLORS.length];
+  document.getElementById('strokeBadge').textContent = `Stroke ${si+1}`;
+  document.getElementById('strokeBadge').style.background = col;
+  const pts = currentStroke.length;
+  document.getElementById('strokeHint').textContent =
+    pts === 0 ? `Draw stroke ${si+1} on the letter` : `${pts} points recorded`;
+  document.getElementById('strokeCount').textContent =
+    `${strokes.length} stroke${strokes.length!==1?'s':''}`;
+}
+
+function updateStrokesList() {
+  const list = document.getElementById('strokesList');
+  list.innerHTML = strokes.map((s, i) => `
+    <div class="stroke-item">
+      <div class="s-dot" style="background:${s.color}"></div>
+      Stroke ${i+1}
+      <span class="s-pts">${s.points.length} pts</span>
+      <button class="s-del" onclick="deleteStroke(${i})">✕</button>
+    </div>
+  `).join('');
+  updateStrokeInfo();
+}
+
+function deleteStroke(idx) {
+  strokes.splice(idx, 1);
+  // Recolor remaining
+  strokes = strokes.map((s, i) => ({ ...s, color: COLORS[i % COLORS.length] }));
+  updateStrokesList();
+  redrawAll();
+}
+
+function doSave() {
+  // Include current in-progress stroke if it has points
+  const all = [...strokes];
+  if (currentStroke.length >= 2) {
+    all.push({ color: COLORS[all.length % COLORS.length], points: [...currentStroke] });
+  }
+  if (all.length === 0) { alert('No strokes to save!'); return false; }
+  savedData[currentLetterIdx] = all;
+  try { localStorage.setItem('tibetan_paths', JSON.stringify(savedData)); } catch(e) {}
+  return true;
+}
+
+function saveLetter() {
+  if (!doSave()) return;
+  currentStroke = [];
+  lastPt = null;
+  strokes = savedData[currentLetterIdx].map(s => ({...s, points:[...s.points]}));
+  updateNav();
+  updateHeader();
+  updateStrokesList();
+  redrawAll();
+  // Flash feedback
+  const btn = document.querySelector('.btn-save');
+  const orig = btn.textContent;
+  btn.textContent = '✅ Saved!';
+  btn.style.background = '#2a8a55';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = '#3bbf7a'; }, 1500);
+
+  // Auto-advance to next unsaved letter
+  const nextUnsaved = ALPHABET.findIndex((_, i) => i > currentLetterIdx && !savedData[i]);
+  if (nextUnsaved !== -1) {
+    setTimeout(() => selectLetter(nextUnsaved), 600);
+  }
+}
+
+function exportAll() {
+  // Include current letter if it has strokes
+  if ((strokes.length > 0 || currentStroke.length >= 2) && !savedData[currentLetterIdx]) {
+    doSave();
+  }
+  const output = {};
+  ALPHABET.forEach((l, i) => {
+    if (savedData[i]) {
+      output[l.char] = {
+        name: l.name,
+        strokes: savedData[i]
+      };
+    }
+  });
+  if (Object.keys(output).length === 0) { alert('No letters saved yet!'); return; }
+
+  const json = JSON.stringify(output, null, 2);
+  document.getElementById('outputBox').value = json;
+  const sec = document.getElementById('exportSection');
+  sec.style.display = 'flex';
+  sec.scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyAll() {
+  const txt = document.getElementById('outputBox').value;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy JSON', 2000);
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+buildNav();
+updateHeader();
+updateStrokeInfo();
+
+document.fonts.ready.then(() => {
+  setTimeout(() => {
+    drawBg();
+    // Load saved strokes for first letter if any
+    if (savedData[0]) {
+      strokes = savedData[0].map(s => ({...s, points:[...s.points]}));
+      updateStrokesList();
+      redrawAll();
+    }
+  }, 150);
+});
+</script>
+</body>
+</html>
