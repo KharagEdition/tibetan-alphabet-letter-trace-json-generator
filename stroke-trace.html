@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tibetan Letter Tracer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Serif+Tibetan:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#F2F4F8;--surface:#FFFFFF;--border:#DDE2EF;--text-1:#0F172A;--text-2:#475569;
+  --text-3:#94A3B8;--accent:#1D4ED8;--accent-lt:#EFF6FF;--green:#15803D;
+  --green-lt:#F0FDF4;--ink:#1E293B;--radius:14px;--shadow:0 2px 16px rgba(0,0,0,0.07);
+  --canvas-size:min(420px,calc(100vw - 40px));
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{height:100%}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;color:var(--text-1);
+  touch-action:none;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:13px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:50}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.topbar-logo{width:34px;height:34px;background:var(--ink);border-radius:9px;display:flex;
+  align-items:center;justify-content:center;font-family:'Noto Serif Tibetan',serif;color:#fff;font-size:1rem;flex-shrink:0}
+.topbar h1{font-size:.9rem;font-weight:700}
+.topbar h1 small{display:block;font-size:.72rem;font-weight:400;color:var(--text-3)}
+.btn-topbar{padding:6px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);
+  font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:700;color:var(--text-2);cursor:pointer;
+  white-space:nowrap;transition:border-color .12s,color .12s}
+.btn-topbar:hover{border-color:var(--accent);color:var(--accent)}
+#screenPaste{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;gap:20px}
+.paste-card{background:var(--surface);border-radius:18px;border:1px solid var(--border);box-shadow:var(--shadow);
+  padding:28px 24px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:16px}
+.paste-card h2{font-size:1.1rem;font-weight:700}
+.paste-card p{font-size:.82rem;color:var(--text-2);line-height:1.6}
+.paste-card p strong{color:var(--text-1)}
+textarea#jsonInput{width:100%;min-height:180px;resize:vertical;font-family:'Courier New',monospace;
+  font-size:.68rem;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;
+  background:#F8FAFC;color:var(--text-1);outline:none;line-height:1.5;transition:border-color .15s}
+textarea#jsonInput:focus{border-color:var(--accent)}
+.paste-error{font-size:.78rem;color:#DC2626;font-weight:600;display:none;padding:8px 12px;
+  background:#FEF2F2;border-radius:8px;border:1px solid #FECACA}
+.btn-primary{width:100%;padding:13px;border-radius:11px;border:none;background:var(--ink);color:white;
+  font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .14s}
+.btn-primary:hover{background:#0F172A}
+#screenTrace{display:none;flex:1;flex-direction:column;align-items:center;padding:16px 16px 32px;
+  gap:12px;max-width:520px;margin:0 auto;width:100%}
+.strip-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.strip-wrap::-webkit-scrollbar{display:none}
+.letter-strip{display:flex;gap:5px;padding:2px 0;width:max-content}
+.ls-btn{width:36px;height:36px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);
+  font-family:'Noto Serif Tibetan',serif;font-size:.95rem;color:var(--text-2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:border-color .1s,background .1s;position:relative}
+.ls-btn:hover{border-color:var(--accent);background:var(--accent-lt)}
+.ls-btn.active{border-color:var(--ink);background:var(--ink);color:white}
+.ls-btn.done{border-color:var(--green);background:var(--green-lt);color:var(--green)}
+.ls-btn.done::after{content:'✓';position:absolute;top:-4px;right:-4px;width:12px;height:12px;
+  background:var(--green);color:white;font-size:7px;font-family:'DM Sans',sans-serif;font-weight:700;
+  border-radius:50%;display:flex;align-items:center;justify-content:center}
+.info-bar{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.ib-char{font-family:'Noto Serif Tibetan',serif;font-size:1.9rem;width:50px;height:50px;background:var(--bg);
+  border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;color:var(--text-1);line-height:1}
+.ib-meta{flex:1;min-width:0}
+.ib-meta h2{font-size:.95rem;font-weight:700}
+.ib-meta p{font-size:.72rem;color:var(--text-3);font-weight:500;margin-top:1px}
+.ib-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.stroke-chip{font-size:.7rem;font-weight:700;color:white;background:var(--accent);padding:3px 10px;
+  border-radius:99px;white-space:nowrap}
+.stroke-chip.done-chip{background:var(--green)}
+.stroke-dots{display:flex;gap:4px}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .15s}
+.sdot.active{background:var(--accent)}
+.sdot.complete{background:var(--green)}
+.canvas-wrap{position:relative;width:var(--canvas-size);height:var(--canvas-size);border-radius:16px;
+  border:1.5px solid var(--border);background:#FAFBFF;touch-action:none;cursor:crosshair;
+  overflow:hidden;box-shadow:var(--shadow);flex-shrink:0}
+.canvas-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+.hint{width:100%;font-size:.78rem;font-weight:500;color:var(--text-2);background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center;line-height:1.5}
+.hint.active{border-color:var(--accent);background:var(--accent-lt);color:var(--accent);font-weight:600}
+.hint.done{border-color:var(--green);background:var(--green-lt);color:var(--green);font-weight:700}
+.controls{display:flex;gap:8px;width:100%}
+.btn-c{flex:1;padding:11px 8px;border-radius:11px;border:1.5px solid var(--border);background:var(--surface);
+  font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:700;color:var(--text-2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  transition:border-color .1s,background .1s,color .1s}
+.btn-c:hover:not(:disabled){border-color:var(--accent);background:var(--accent-lt);color:var(--accent)}
+.btn-c.dark{background:var(--ink);border-color:var(--ink);color:white}
+.btn-c.dark:hover:not(:disabled){background:#0F172A}
+.btn-c.success{background:var(--green);border-color:var(--green);color:white}
+.btn-c.success:hover:not(:disabled){background:#14532D}
+.btn-c:disabled{opacity:.35;pointer-events:none}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo">ཀ</div>
+    <h1>Tibetan Tracer <small>Guided stroke-by-stroke tracing</small></h1>
+  </div>
+  <button class="btn-topbar" onclick="showPaste()">⬆ Load JSON</button>
+</div>
+
+<div id="screenPaste">
+  <div class="paste-card">
+    <h2>Load your stroke data</h2>
+    <p>Export JSON from the <strong>Stroke Recorder</strong>, then paste it below.</p>
+    <textarea id="jsonInput" placeholder='Paste JSON here…'></textarea>
+    <div class="paste-error" id="pasteError"></div>
+    <button class="btn-primary" onclick="loadJSON()">Load Letters →</button>
+  </div>
+</div>
+
+<div id="screenTrace">
+  <div class="strip-wrap"><div class="letter-strip" id="letterStrip"></div></div>
+  <div class="info-bar">
+    <div class="ib-char" id="ibChar">ཀ</div>
+    <div class="ib-meta"><h2 id="ibName">Ka</h2><p id="ibDesc">1st consonant</p></div>
+    <div class="ib-right">
+      <div class="stroke-chip" id="strokeChip">Stroke 1 of 1</div>
+      <div class="stroke-dots" id="strokeDots"></div>
+    </div>
+  </div>
+  <div class="canvas-wrap" id="canvasWrap">
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="trCanvas"></canvas>
+    <canvas id="guCanvas"></canvas>
+  </div>
+  <div class="hint" id="hint">Follow the blue dot — trace along the letter path</div>
+  <div class="controls">
+    <button class="btn-c"      id="btnPrev"  onclick="prevLetter()">← Prev</button>
+    <button class="btn-c"      id="btnReset" onclick="resetLetter()">↺ Retry</button>
+    <button class="btn-c dark" id="btnNext"  onclick="nextLetter()">Next →</button>
+  </div>
+</div>
+
+<script>
+/* ── STATE ───────────────────────────────────────────── */
+let letters=[],lIdx=0,sIdx=0,fillIdx=0,done={},isDown=false,normSt=[];
+const PROX=28, INK_C='#1E293B', DONE_C='#15803D', GUIDE_C='#1D4ED8';
+
+const bgC=document.getElementById('bgCanvas');
+const trC=document.getElementById('trCanvas');
+const guC=document.getElementById('guCanvas');
+const wrap=document.getElementById('canvasWrap');
+let bgX,trX,guX,CS,DPR;
+
+/*
+  ═══════════════════════════════════════════════════════
+  CORE APPROACH — "FOG OF WAR" REVEAL
+  ═══════════════════════════════════════════════════════
+  Two offscreen canvases are built per letter:
+    • letterInkCanvas  — full glyph in dark ink
+    • letterDoneCanvas — full glyph in green
+    • revealCanvas     — starts empty; we PAINT onto it
+                         with a fat round brush as the
+                         user traces each stroke path.
+  
+  redrawTrace() composites:
+    letter ∩ reveal → trCanvas
+  
+  Because we're revealing the actual pre-rendered font
+  glyph, the result is always 100% identical to the
+  ghost letter — guaranteed, regardless of stroke path.
+  ═══════════════════════════════════════════════════════
+*/
+let letterInkCanvas=null, letterDoneCanvas=null;
+let revealCanvas=null, rvX=null;
+
+/* ── JSON LOAD ───────────────────────────────────────── */
+function loadJSON(){
+  const raw=document.getElementById('jsonInput').value.trim();
+  const errEl=document.getElementById('pasteError');
+  errEl.style.display='none';
+  if(!raw){showErr('Please paste your JSON.');return;}
+  let parsed;
+  try{parsed=JSON.parse(raw);}catch(e){showErr('Invalid JSON.');return;}
+  letters=[];
+  if(Array.isArray(parsed)){
+    letters=parsed.filter(l=>l.char&&l.strokes&&l.strokes.length);
+  }else if(typeof parsed==='object'){
+    Object.entries(parsed).forEach(([char,v])=>{
+      if(v&&v.strokes&&v.strokes.length)
+        letters.push({char,name:v.name||char,desc:'',index:v.index||0,strokes:v.strokes});
+    });
+    letters.sort((a,b)=>a.index-b.index);
+  }
+  if(!letters.length){showErr('No valid letters found.');return;}
+  done={};lIdx=0;showTrace();
+}
+function showErr(m){const el=document.getElementById('pasteError');el.textContent=m;el.style.display='block';}
+function showPaste(){document.getElementById('screenPaste').style.display='flex';document.getElementById('screenTrace').style.display='none';}
+function showTrace(){document.getElementById('screenPaste').style.display='none';document.getElementById('screenTrace').style.display='flex';buildStrip();loadLetter(0);}
+
+/* ── CANVAS SETUP ────────────────────────────────────── */
+function setupCanvas(){
+  DPR=window.devicePixelRatio||1;
+  const r=wrap.getBoundingClientRect();
+  CS=r.width;
+  [bgC,trC,guC].forEach(c=>{
+    c.width=Math.round(CS*DPR);c.height=Math.round(CS*DPR);
+    c.style.width=CS+'px';c.style.height=CS+'px';
+  });
+  bgX=bgC.getContext('2d');bgX.scale(DPR,DPR);
+  trX=trC.getContext('2d');trX.scale(DPR,DPR);
+  guX=guC.getContext('2d');guX.scale(DPR,DPR);
+}
+
+/* ── GLYPH RENDERER ──────────────────────────────────── */
+function renderGlyph(ctx,char,color){
+  const fs=Math.round(CS*0.60);
+  ctx.font=`700 ${fs}px "Noto Serif Tibetan",serif`;
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  const m=ctx.measureText(char);
+  const th=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
+  const y=CS/2+m.actualBoundingBoxAscent-th/2;
+  ctx.fillStyle=color;
+  ctx.fillText(char,CS/2,y);
+}
+
+/* ── BUILD LETTER CANVASES ───────────────────────────── */
+function buildLetterCanvases(char){
+  [[INK_C, c=>{letterInkCanvas=c;}],[DONE_C, c=>{letterDoneCanvas=c;}]].forEach(([color,assign])=>{
+    const c=document.createElement('canvas');
+    c.width=Math.round(CS*DPR);c.height=Math.round(CS*DPR);
+    const x=c.getContext('2d');x.scale(DPR,DPR);
+    renderGlyph(x,char,color);
+    assign(c);
+  });
+}
+
+/* ── REVEAL CANVAS ───────────────────────────────────── */
+function initRevealCanvas(){
+  revealCanvas=document.createElement('canvas');
+  revealCanvas.width=Math.round(CS*DPR);
+  revealCanvas.height=Math.round(CS*DPR);
+  rvX=revealCanvas.getContext('2d');
+  rvX.scale(DPR,DPR);
+}
+
+/*
+  Brush radius for the reveal paint.
+  Must be wide enough that tracing along the stroke
+  centerline fully uncovers the font's thick calligraphic
+  strokes on both sides. 10% of canvas size works well.
+*/
+const BR=()=>CS*0.10;
+
+/* Paint from point[fromIdx] to point[toIdx-1] on revealCanvas */
+function paintReveal(pts,fromIdx,toIdx){
+  if(toIdx<=fromIdx||fromIdx>=pts.length)return;
+  const r=BR();
+  const end=Math.min(toIdx,pts.length);
+  rvX.save();
+  rvX.strokeStyle='#000';rvX.fillStyle='#000';
+  rvX.lineWidth=r*2;rvX.lineCap='round';rvX.lineJoin='round';
+  rvX.beginPath();
+  rvX.moveTo(pts[fromIdx].x,pts[fromIdx].y);
+  for(let i=fromIdx+1;i<end;i++) rvX.lineTo(pts[i].x,pts[i].y);
+  rvX.stroke();
+  // Solid circle cap at the leading edge
+  rvX.beginPath();rvX.arc(pts[end-1].x,pts[end-1].y,r,0,Math.PI*2);rvX.fill();
+  rvX.restore();
+}
+
+function paintStrokeFull(pts){paintReveal(pts,0,pts.length);}
+
+/* ── REDRAW TRACE ────────────────────────────────────── */
+function redrawTrace(){
+  trX.clearRect(0,0,CS,CS);
+  if(!letterInkCanvas||!revealCanvas)return;
+
+  if(done[lIdx]){
+    // Complete — show the full green letter directly
+    trX.save();trX.setTransform(1,0,0,1,0,0);
+    trX.drawImage(letterDoneCanvas,0,0);
+    trX.restore();
+    return;
+  }
+
+  // Composite: letter × reveal mask
+  const tmp=document.createElement('canvas');
+  tmp.width=Math.round(CS*DPR);tmp.height=Math.round(CS*DPR);
+  const tx=tmp.getContext('2d');
+
+  // 1) Draw the pre-rendered letter
+  tx.drawImage(letterInkCanvas,0,0);
+  // 2) Clip: keep only pixels that the reveal mask has painted
+  tx.globalCompositeOperation='destination-in';
+  tx.drawImage(revealCanvas,0,0);
+
+  // 3) Blit raw pixels (bypass DPR scaling on trX)
+  trX.save();trX.setTransform(1,0,0,1,0,0);
+  trX.drawImage(tmp,0,0);
+  trX.restore();
+}
+
+/* ── DRAW BACKGROUND ─────────────────────────────────── */
+function drawBg(char){
+  bgX.clearRect(0,0,CS,CS);
+  bgX.strokeStyle='#E9ECF6';bgX.lineWidth=1;bgX.setLineDash([3,6]);
+  [CS/3,CS*2/3].forEach(v=>{
+    bgX.beginPath();bgX.moveTo(v,0);bgX.lineTo(v,CS);bgX.stroke();
+    bgX.beginPath();bgX.moveTo(0,v);bgX.lineTo(CS,v);bgX.stroke();
+  });
+  bgX.setLineDash([]);
+  bgX.strokeStyle='#D8DCF0';bgX.lineWidth=1;
+  bgX.beginPath();bgX.moveTo(CS/2,0);bgX.lineTo(CS/2,CS);bgX.stroke();
+  bgX.beginPath();bgX.moveTo(0,CS/2);bgX.lineTo(CS,CS/2);bgX.stroke();
+  // Ghost — faint outline to trace over
+  bgX.save();bgX.globalAlpha=0.08;
+  renderGlyph(bgX,char,INK_C);
+  bgX.restore();
+}
+
+/* ── DRAW GUIDE ──────────────────────────────────────── */
+function drawGuide(){
+  guX.clearRect(0,0,CS,CS);
+  if(done[lIdx]||sIdx>=normSt.length)return;
+  const pts=normSt[sIdx].points;
+  if(pts.length<2)return;
+
+  // ── Dotted path line ──
+  guX.save();guX.setLineDash([5,8]);
+  guX.strokeStyle='rgba(29,78,216,0.22)';guX.lineWidth=3;guX.lineCap='round';guX.lineJoin='round';
+  guX.beginPath();guX.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length-1;i++){
+    const mx=(pts[i].x+pts[i+1].x)/2,my=(pts[i].y+pts[i+1].y)/2;
+    guX.quadraticCurveTo(pts[i].x,pts[i].y,mx,my);
+  }
+  guX.lineTo(pts[pts.length-1].x,pts[pts.length-1].y);
+  guX.stroke();guX.restore();
+
+  // ── Numbered waypoints — evenly spaced along the stroke ──
+  // Pick up to 8 numbered stops (start + end + up to 6 in between)
+  const maxPts = Math.min(pts.length, 8);
+  const step   = (pts.length - 1) / (maxPts - 1);
+  const dotR   = Math.max(10, CS * 0.025);
+  const fontSize = Math.max(10, CS * 0.028);
+
+  for(let n = 0; n < maxPts; n++){
+    const idx  = Math.round(n * step);
+    const p    = pts[idx];
+    const reached = idx < fillIdx;
+    const isCurrent = !reached && idx >= fillIdx && (n === 0 || Math.round((n-1)*step) < fillIdx);
+
+    // Outer glow for current target
+    if(isCurrent && n === 0){
+      guX.beginPath();guX.arc(p.x,p.y,dotR+6,0,Math.PI*2);
+      guX.fillStyle='rgba(29,78,216,0.10)';guX.fill();
+    }
+
+    // Dot fill
+    guX.beginPath();guX.arc(p.x,p.y,dotR,0,Math.PI*2);
+    if(reached){
+      guX.fillStyle='rgba(21,128,61,0.85)';  // green — already passed
+    } else {
+      guX.fillStyle=isCurrent&&n===0?GUIDE_C:'rgba(29,78,216,0.50)';
+    }
+    guX.fill();
+
+    // White border
+    guX.beginPath();guX.arc(p.x,p.y,dotR,0,Math.PI*2);
+    guX.strokeStyle='rgba(255,255,255,0.9)';guX.lineWidth=2;guX.stroke();
+
+    // Number label
+    guX.save();
+    guX.font=`700 ${fontSize}px "DM Sans",sans-serif`;
+    guX.textAlign='center';guX.textBaseline='middle';
+    guX.fillStyle='#fff';
+    guX.fillText(String(n+1),p.x,p.y+0.5);
+    guX.restore();
+  }
+
+  // ── Moving blue dot at exact current target position ──
+  if(fillIdx < pts.length){
+    const tp=pts[fillIdx];
+    guX.beginPath();guX.arc(tp.x,tp.y,CS*0.016,0,Math.PI*2);
+    guX.fillStyle=GUIDE_C;guX.fill();
+    guX.beginPath();guX.arc(tp.x,tp.y,CS*0.016,0,Math.PI*2);
+    guX.strokeStyle='rgba(255,255,255,0.8)';guX.lineWidth=2;guX.stroke();
+  }
+}
+
+/* ── NORMALISE ───────────────────────────────────────── */
+function normalise(raw,size){
+  let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;
+  raw.forEach(s=>s.points.forEach(p=>{
+    if(p.x<mnX)mnX=p.x;if(p.y<mnY)mnY=p.y;if(p.x>mxX)mxX=p.x;if(p.y>mxY)mxY=p.y;
+  }));
+  const rX=mxX-mnX||1,rY=mxY-mnY||1,r=Math.max(rX,rY);
+  const pad=size*0.13,avail=size-pad*2,sc=avail/r;
+  const ox=pad+(avail-rX*sc)/2-mnX*sc,oy=pad+(avail-rY*sc)/2-mnY*sc;
+  return raw.map(s=>({...s,points:s.points.map(p=>({x:p.x*sc+ox,y:p.y*sc+oy}))}));
+}
+
+/* ── LOAD LETTER ─────────────────────────────────────── */
+function loadLetter(idx){
+  lIdx=idx;sIdx=0;fillIdx=0;isDown=false;
+  const l=letters[idx];
+  setupCanvas();
+  normSt=normalise(l.strokes,CS);
+  buildLetterCanvases(l.char);
+  initRevealCanvas();
+  drawBg(l.char);
+  if(done[lIdx]) normSt.forEach(s=>paintStrokeFull(s.points));
+  redrawTrace();drawGuide();
+  updateInfoBar();updateHint();updateControls();updateStrip();
+  const btn=document.getElementById(`ls-${idx}`);
+  if(btn)btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+}
+
+/* ── POINTER ─────────────────────────────────────────── */
+function getPos(e){
+  const r=wrap.getBoundingClientRect(),src=e.touches?e.touches[0]:e;
+  return{x:(src.clientX-r.left)*(CS/r.width),y:(src.clientY-r.top)*(CS/r.height)};
+}
+function dst(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.sqrt(dx*dx+dy*dy);}
+
+function onMove(pos){
+  if(!isDown||done[lIdx]||sIdx>=normSt.length)return;
+  const pts=normSt[sIdx].points;
+  let adv=false;
+  const prev=fillIdx;
+  while(fillIdx<pts.length&&dst(pos,pts[fillIdx])<PROX){fillIdx++;adv=true;}
+  if(adv){
+    paintReveal(pts,prev,fillIdx);   // incremental paint — only new segment
+    redrawTrace();drawGuide();updateInfoBar();
+    if(fillIdx>=pts.length){
+      sIdx++;fillIdx=0;
+      if(sIdx>=normSt.length){
+        done[lIdx]=true;
+        normSt.forEach(s=>paintStrokeFull(s.points)); // fill any gaps
+        redrawTrace();guX.clearRect(0,0,CS,CS);updateStrip();
+      }
+      drawGuide();updateInfoBar();updateHint();updateControls();
+    }
+  }
+}
+guC.addEventListener('pointerdown',e=>{e.preventDefault();guC.setPointerCapture(e.pointerId);isDown=true;onMove(getPos(e));});
+guC.addEventListener('pointermove',e=>{e.preventDefault();onMove(getPos(e));});
+guC.addEventListener('pointerup',()=>{isDown=false;});
+guC.addEventListener('pointercancel',()=>{isDown=false;});
+
+/* ── NAV ─────────────────────────────────────────────── */
+function prevLetter(){if(lIdx>0)loadLetter(lIdx-1);}
+function nextLetter(){if(lIdx<letters.length-1)loadLetter(lIdx+1);}
+function resetLetter(){done[lIdx]=false;loadLetter(lIdx);}
+
+/* ── UI ──────────────────────────────────────────────── */
+function buildStrip(){
+  const s=document.getElementById('letterStrip');s.innerHTML='';
+  letters.forEach((l,i)=>{
+    const b=document.createElement('button');
+    b.className='ls-btn';b.textContent=l.char;b.title=l.name;b.id=`ls-${i}`;
+    b.onclick=()=>loadLetter(i);s.appendChild(b);
+  });
+}
+function updateStrip(){
+  letters.forEach((_,i)=>{
+    const b=document.getElementById(`ls-${i}`);if(!b)return;
+    b.className='ls-btn'+(i===lIdx?' active':'')+(done[i]?' done':'');
+  });
+}
+function updateInfoBar(){
+  const l=letters[lIdx],ns=normSt.length,si=Math.min(sIdx,ns-1),isDone=done[lIdx];
+  document.getElementById('ibChar').textContent=l.char;
+  document.getElementById('ibName').textContent=l.name;
+  document.getElementById('ibDesc').textContent=l.desc||('Consonant '+(lIdx+1));
+  const chip=document.getElementById('strokeChip');
+  chip.textContent=isDone?'Complete ✓':`Stroke ${si+1} of ${ns}`;
+  chip.className='stroke-chip'+(isDone?' done-chip':'');
+  const dots=document.getElementById('strokeDots');dots.innerHTML='';
+  for(let i=0;i<ns;i++){const d=document.createElement('div');d.className='sdot'+(isDone||i<sIdx?' complete':(i===sIdx?' active':''));dots.appendChild(d);}
+}
+function updateHint(){
+  const el=document.getElementById('hint');
+  if(done[lIdx]){el.textContent='✓ Letter complete! Tap "Next →" to continue.';el.className='hint done';}
+  else{el.textContent=`Trace stroke ${sIdx+1} of ${normSt.length} — follow the blue dot`;el.className='hint active';}
+}
+function updateControls(){
+  document.getElementById('btnPrev').disabled=lIdx===0;
+  document.getElementById('btnNext').disabled=lIdx===letters.length-1;
+  const n=document.getElementById('btnNext');
+  n.className=done[lIdx]&&lIdx<letters.length-1?'btn-c success':'btn-c dark';
+}
+let _rt;
+window.addEventListener('resize',()=>{clearTimeout(_rt);_rt=setTimeout(()=>{if(letters.length)loadLetter(lIdx);},150);});
+</script>
+</body>
+</html>
