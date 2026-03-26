@@ -135,7 +135,7 @@ body {
   font-family: 'Noto Serif Tibetan', serif;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+  transition: border-color 0.12s, background 0.12s;
   color: var(--text-2);
   position: relative;
   padding: 0;
@@ -143,7 +143,6 @@ body {
 .lgrid-btn:hover {
   border-color: var(--accent);
   background: var(--accent-lt);
-  transform: translateY(-1px);
   z-index: 1;
 }
 .lgrid-btn.active {
@@ -280,11 +279,6 @@ body {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-2);
-  animation: slideIn 0.18s ease;
-}
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 .stroke-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .stroke-pts { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-3); }
@@ -301,6 +295,26 @@ body {
   font-family: 'DM Sans', sans-serif;
 }
 .stroke-del:hover { background: #fca5a5; }
+
+/* ── Processing Info ──────────────────────────────────── */
+.processing-info {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 12px;
+  flex-wrap: wrap;
+}
+.processing-stat {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--accent-lt);
+  color: var(--accent);
+  border: 1px solid rgba(79,107,240,0.2);
+}
+.processing-stat span {
+  font-weight: 700;
+}
 
 /* ── Divider ──────────────────────────────────────────── */
 .divider { height: 1px; background: var(--border); margin: 0 20px; }
@@ -324,15 +338,14 @@ body {
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.12s, box-shadow 0.12s;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   line-height: 1.2;
+  transition: background 0.12s;
 }
-.btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.btn:active { transform: translateY(0); }
+.btn:hover { filter: brightness(0.95); }
 .btn .btn-icon { font-size: 1rem; }
 
 .btn-undo   { background: var(--amber-lt);  color: var(--amber);  }
@@ -357,13 +370,13 @@ body {
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.12s, background 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
+  transition: background 0.12s;
 }
-.btn-save-full:hover { background: #15803d; transform: translateY(-1px); }
+.btn-save-full:hover { background: #15803d; }
 .btn-save-full.saved-state { background: #15803d; }
 
 .btn-export-icon {
@@ -376,14 +389,13 @@ body {
   font-size: 1.1rem;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+  transition: border-color 0.12s;
   flex-shrink: 0;
 }
 .btn-export-icon:hover {
   border-color: var(--accent);
   background: var(--accent-lt);
   color: var(--accent);
-  transform: translateY(-1px);
 }
 
 /* ── Export Panel ─────────────────────────────────────── */
@@ -546,6 +558,13 @@ textarea#outputBox {
       <canvas id="drawCanvas"></canvas>
     </div>
 
+    <!-- Processing Stats -->
+    <div class="processing-info" id="processingInfo" style="display:none;">
+      <div class="processing-stat">Raw: <span id="statRaw">0</span> pts</div>
+      <div class="processing-stat">Filtered: <span id="statFiltered">0</span> pts</div>
+      <div class="processing-stat">Simplified: <span id="statSimplified">0</span> pts</div>
+    </div>
+
     <!-- Stroke Info -->
     <div class="stroke-bar">
       <div class="stroke-chip" id="strokeChip" style="background:#4F6BF0">Stroke 1</div>
@@ -606,6 +625,269 @@ textarea#outputBox {
 
 <script>
 /* ═══════════════════════════════════════════════════════
+   CONFIGURATION CONSTANTS
+═══════════════════════════════════════════════════════ */
+const CONFIG = {
+  // Point processing thresholds (in normalized coordinates 0-1)
+  SIMPLIFY_EPSILON: 0.008,     // Douglas-Peucker tolerance
+  MIN_PT_DISTANCE: 0.015,       // Minimum distance between points after normalization
+  SPLINE_TENSION: 0.5,          // Catmull-Rom tension (0.5 = standard)
+  CANVAS_PADDING: 0.13,         // Padding around letter (13%)
+  CANVAS_SIZE: 1000,            // Reference size for normalized output
+
+  // Raw capture settings (in screen pixels)
+  RAW_MIN_DISTANCE: 8,          // Min pixels between raw captured points
+  RAW_MIN_DISTANCE_INITIAL: 4,  // Min pixels for first few points
+};
+
+/* ═══════════════════════════════════════════════════════
+   GEOMETRY ALGORITHMS
+═══════════════════════════════════════════════════════ */
+
+/**
+ * Calculate Euclidean distance between two points
+ */
+function distance(p1, p2) {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/**
+ * Calculate perpendicular distance from point p to line segment vw
+ */
+function perpendicularDistance(p, v, w) {
+  const l2 = (w.x - v.x) ** 2 + (w.y - v.y) ** 2;
+  if (l2 === 0) return distance(p, v);
+
+  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+
+  const projection = {
+    x: v.x + t * (w.x - v.x),
+    y: v.y + t * (w.y - v.y)
+  };
+
+  return distance(p, projection);
+}
+
+/**
+ * Douglas-Peucker point simplification algorithm
+ * Reduces point count while preserving shape
+ * @param {Array} points - Array of {x, y} points
+ * @param {number} epsilon - Tolerance for simplification
+ * @returns {Array} Simplified points
+ */
+function simplifyPoints(points, epsilon) {
+  if (points.length <= 2) return points;
+
+  let maxDist = 0;
+  let maxIndex = 0;
+  const start = points[0];
+  const end = points[points.length - 1];
+
+  // Find point with maximum distance from line
+  for (let i = 1; i < points.length - 1; i++) {
+    const dist = perpendicularDistance(points[i], start, end);
+    if (dist > maxDist) {
+      maxDist = dist;
+      maxIndex = i;
+    }
+  }
+
+  // If max distance is greater than epsilon, recursively simplify
+  if (maxDist > epsilon) {
+    const left = simplifyPoints(points.slice(0, maxIndex + 1), epsilon);
+    const right = simplifyPoints(points.slice(maxIndex), epsilon);
+
+    // Combine results, removing duplicate point at the junction
+    return left.slice(0, -1).concat(right);
+  }
+
+  // All points are within tolerance, return just endpoints
+  return [start, end];
+}
+
+/**
+ * Catmull-Rom spline interpolation
+ * Generates smooth curves that pass through all control points
+ * @param {Array} points - Control points
+ * @param {number} tension - Tension parameter (0.5 = standard Catmull-Rom)
+ * @param {number} segments - Number of segments to generate between each pair of points
+ * @returns {Array} Smoothed points
+ */
+function catmullRomSpline(points, tension = 0.5, segments = 8) {
+  if (points.length < 2) return points;
+  if (points.length === 2) return points;
+
+  const result = [];
+
+  // Add first point
+  result.push(points[0]);
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+
+    // Generate segments between p1 and p2
+    for (let t = 1; t <= segments; t++) {
+      const t1 = t / segments;
+
+      // Catmull-Rom formula
+      const t2 = t1 * t1;
+      const t3 = t2 * t1;
+
+      const x = 0.5 * (
+        (2 * p1.x) +
+        (-p0.x + p2.x) * t1 +
+        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
+      );
+
+      const y = 0.5 * (
+        (2 * p1.y) +
+        (-p0.y + p2.y) * t1 +
+        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
+      );
+
+      result.push({ x, y });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Find bounding box of all points across all strokes
+ */
+function findBoundingBox(strokes) {
+  let minX = Infinity, minY = Infinity;
+  let maxX = -Infinity, maxY = -Infinity;
+
+  strokes.forEach(stroke => {
+    stroke.points.forEach(p => {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    });
+  });
+
+  return { minX, minY, maxX, maxY };
+}
+
+/**
+ * Normalize points to 0-1 coordinate system
+ * @param {Array} rawStrokes - Raw strokes with screen coordinates
+ * @returns {Object} Normalized strokes with bounding box info
+ */
+function normalizeToUnitSquare(rawStrokes) {
+  if (rawStrokes.length === 0) return { strokes: [], bounds: null };
+
+  // Find bounding box
+  const bounds = findBoundingBox(rawStrokes);
+  const width = bounds.maxX - bounds.minX || 1;
+  const height = bounds.maxY - bounds.minY || 1;
+  const size = Math.max(width, height);
+
+  // Add padding and normalize
+  const padding = CONFIG.CANVAS_PADDING;
+  const availableSize = 1 - padding * 2;
+  const scale = availableSize / size;
+
+  const offsetX = padding + (availableSize - width * scale) / 2 - bounds.minX * scale;
+  const offsetY = padding + (availableSize - height * scale) / 2 - bounds.minY * scale;
+
+  const normalized = rawStrokes.map(stroke => ({
+    type: stroke.type || 'path',
+    points: stroke.points.map(p => ({
+      x: Math.round((p.x * scale + offsetX) * 10000) / 10000,  // 4 decimal precision
+      y: Math.round((p.y * scale + offsetY) * 10000) / 10000
+    }))
+  }));
+
+  return {
+    strokes: normalized,
+    bounds: {
+      minX: Math.round((bounds.minX * scale + offsetX) * 1000) / 1000,
+      maxX: Math.round((bounds.maxX * scale + offsetX) * 1000) / 1000,
+      minY: Math.round((bounds.minY * scale + offsetY) * 1000) / 1000,
+      maxY: Math.round((bounds.maxY * scale + offsetY) * 1000) / 1000
+    }
+  };
+}
+
+/**
+ * Apply adaptive minimum distance filter
+ * Removes points that are too close together, with adaptive threshold
+ */
+function adaptiveMinDistanceFilter(points, baseThreshold) {
+  if (points.length <= 1) return points;
+
+  const filtered = [points[0]];
+  let lastPoint = points[0];
+
+  for (let i = 1; i < points.length; i++) {
+    const dist = distance(points[i], lastPoint);
+
+    // For first few points, use smaller threshold to capture detail
+    const threshold = filtered.length < 5
+      ? baseThreshold * 0.5
+      : baseThreshold;
+
+    if (dist >= threshold) {
+      filtered.push(points[i]);
+      lastPoint = points[i];
+    }
+  }
+
+  // Always ensure last point is included
+  if (filtered.length > 0 && distance(filtered[filtered.length - 1], points[points.length - 1]) > 0) {
+    filtered.push(points[points.length - 1]);
+  }
+
+  return filtered;
+}
+
+/**
+ * Process raw stroke points through the full pipeline:
+ * 1. Min distance filter
+ * 2. Douglas-Peucker simplification
+ * 3. Catmull-Rom smoothing
+ * Returns processing stats
+ */
+function processStrokePoints(rawPoints) {
+  const stats = {
+    raw: rawPoints.length,
+    filtered: 0,
+    simplified: 0,
+    final: 0
+  };
+
+  if (rawPoints.length < 2) {
+    return { points: rawPoints, stats };
+  }
+
+  // Step 1: Min distance filter (in screen pixels first)
+  const minDist = CONFIG.RAW_MIN_DISTANCE;
+  let points = adaptiveMinDistanceFilter(rawPoints, minDist);
+  stats.filtered = points.length;
+
+  // Step 2: Douglas-Peucker simplification (still in screen coords)
+  // Convert epsilon to screen pixels (assuming ~440px canvas)
+  const screenEpsilon = CONFIG.SIMPLIFY_EPSILON * 440;
+  points = simplifyPoints(points, screenEpsilon);
+  stats.simplified = points.length;
+
+  stats.final = points.length;
+
+  return { points, stats };
+}
+
+/* ═══════════════════════════════════════════════════════
    DATA
 ═══════════════════════════════════════════════════════ */
 const ALPHABET = [
@@ -651,14 +933,14 @@ const COLORS = [
 ═══════════════════════════════════════════════════════ */
 let savedData    = {};
 let currentIdx   = 0;
-let strokes      = [];   // committed strokes [{color,points:[]}]
-let currentPts   = [];   // in-progress stroke
+let strokes      = [];   // committed strokes [{color,points:[],rawPoints:[]}]
+let currentPts   = [];   // in-progress stroke (raw)
 let isDrawing    = false;
 let lastPt       = null;
 
 // Load from localStorage
 try {
-  const raw = localStorage.getItem('tib_paths_v2');
+  const raw = localStorage.getItem('tib_paths_v3');
   if (raw) savedData = JSON.parse(raw);
 } catch(e) {}
 
@@ -803,7 +1085,6 @@ function drawStrokeDots(pts, color, num, alpha) {
 /* ═══════════════════════════════════════════════════════
    POINTER EVENTS
 ═══════════════════════════════════════════════════════ */
-const MIN_D = 6;
 
 wrap.addEventListener('pointerdown', e => {
   e.preventDefault();
@@ -815,19 +1096,28 @@ wrap.addEventListener('pointerdown', e => {
   lastPt = pos;
   redraw();
 });
+
 wrap.addEventListener('pointermove', e => {
   if (!isDrawing) return;
   e.preventDefault();
   const pos = getPos(e);
+
+  // Adaptive minimum distance filter during capture
+  const minDist = currentPts.length < 5
+    ? CONFIG.RAW_MIN_DISTANCE_INITIAL
+    : CONFIG.RAW_MIN_DISTANCE;
+
   if (lastPt) {
     const dx = pos.x - lastPt.x, dy = pos.y - lastPt.y;
-    if (Math.sqrt(dx*dx + dy*dy) < MIN_D) return;
+    if (Math.sqrt(dx*dx + dy*dy) < minDist) return;
   }
+
   currentPts.push(pos);
   lastPt = pos;
   redraw();
   updateStrokeInfo();
 });
+
 wrap.addEventListener('pointerup',     () => { isDrawing = false; });
 wrap.addEventListener('pointercancel', () => { isDrawing = false; });
 
@@ -840,7 +1130,7 @@ function undoPoint() {
     lastPt = currentPts[currentPts.length - 1] || null;
   } else if (strokes.length > 0) {
     const last = strokes.pop();
-    currentPts = [...last.points];
+    currentPts = [...last.rawPoints];
     currentPts.pop();
     lastPt = currentPts[currentPts.length - 1] || null;
     updateStrokesList();
@@ -858,24 +1148,48 @@ function clearStroke() {
 
 function addStroke() {
   if (currentPts.length < 2) { showToast('⚠️ Draw at least 2 points first'); return; }
+
+  // Process the stroke through our pipeline
+  const { points: processedPoints, stats } = processStrokePoints(currentPts);
+
   const col = COLORS[strokes.length % COLORS.length];
-  strokes.push({ color: col, points: [...currentPts] });
+  strokes.push({
+    color: col,
+    points: processedPoints,
+    rawPoints: [...currentPts],
+    stats: stats
+  });
+
   currentPts = [];
   lastPt     = null;
+
+  // Show processing info
+  updateProcessingInfo(stats);
+
   updateStrokesList();
   updateStrokeInfo();
   redraw();
-  showToast(`✓ Stroke ${strokes.length} added`);
+  showToast(`✓ Stroke ${strokes.length} added (${stats.final} pts)`);
 }
 
 function doSave() {
   const all = [...strokes];
   if (currentPts.length >= 2) {
-    all.push({ color: COLORS[all.length % COLORS.length], points: [...currentPts] });
+    const { points: processedPoints, stats } = processStrokePoints(currentPts);
+    all.push({ color: COLORS[all.length % COLORS.length], points: processedPoints, rawPoints: [...currentPts], stats });
   }
   if (all.length === 0) { showToast('⚠️ No strokes to save'); return false; }
-  savedData[currentIdx] = all;
-  try { localStorage.setItem('tib_paths_v2', JSON.stringify(savedData)); } catch(e) {}
+
+  // Normalize to 0-1 coordinate system before saving
+  const { strokes: normalizedStrokes, bounds } = normalizeToUnitSquare(all);
+
+  savedData[currentIdx] = {
+    strokes: normalizedStrokes,
+    bounds: bounds,
+    canvasSize: CONFIG.CANVAS_SIZE
+  };
+
+  try { localStorage.setItem('tib_paths_v3', JSON.stringify(savedData)); } catch(e) {}
   return true;
 }
 
@@ -883,7 +1197,22 @@ function saveLetter() {
   if (!doSave()) return;
   currentPts = [];
   lastPt     = null;
-  strokes    = savedData[currentIdx].map(s => ({ ...s, points: [...s.points] }));
+
+  // Reload from saved data (which is normalized)
+  if (savedData[currentIdx]) {
+    const saved = savedData[currentIdx];
+    // Convert back to screen coordinates for display
+    const scale = CSIZE / CONFIG.CANVAS_SIZE;
+    strokes = saved.strokes.map((s, i) => ({
+      color: COLORS[i % COLORS.length],
+      points: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
+      rawPoints: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
+      stats: { raw: 0, filtered: s.points.length, simplified: s.points.length, final: s.points.length }
+    }));
+  } else {
+    strokes = [];
+  }
+
   updateGrid();
   updateHeader();
   updateStrokesList();
@@ -917,7 +1246,21 @@ function selectLetter(idx) {
     }
   }
   currentIdx = idx;
-  strokes    = savedData[idx] ? savedData[idx].map(s => ({ ...s, points: [...s.points] })) : [];
+
+  // Load from saved data (normalized) and convert to screen coords
+  if (savedData[idx]) {
+    const saved = savedData[idx];
+    const scale = CSIZE / CONFIG.CANVAS_SIZE;
+    strokes = saved.strokes.map((s, i) => ({
+      color: COLORS[i % COLORS.length],
+      points: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
+      rawPoints: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
+      stats: { raw: 0, filtered: s.points.length, simplified: s.points.length, final: s.points.length }
+    }));
+  } else {
+    strokes = [];
+  }
+
   currentPts = [];
   lastPt     = null;
   updateGrid();
@@ -967,6 +1310,18 @@ function updateHeader() {
   document.getElementById('progressPill').textContent = `${total} / ${ALPHABET.length}`;
 }
 
+function updateProcessingInfo(stats) {
+  const info = document.getElementById('processingInfo');
+  if (stats) {
+    info.style.display = 'flex';
+    document.getElementById('statRaw').textContent = stats.raw;
+    document.getElementById('statFiltered').textContent = stats.filtered;
+    document.getElementById('statSimplified').textContent = stats.simplified;
+  } else {
+    info.style.display = 'none';
+  }
+}
+
 function updateStrokeInfo() {
   const si  = strokes.length;
   const col = COLORS[si % COLORS.length];
@@ -1014,22 +1369,24 @@ function deleteStroke(idx) {
    EXPORT
 ═══════════════════════════════════════════════════════ */
 function buildExportData() {
-  const out = {};
+  const out = {
+    version: "1.0",
+    coordinateSystem: "normalized-0-1",
+    canvasSize: CONFIG.CANVAS_SIZE,
+    letters: {}
+  };
+
   ALPHABET.forEach((l, i) => {
     if (savedData[i]) {
-      out[l.char] = {
-        name:    l.name,
-        index:   i + 1,
-        strokes: savedData[i].map(s => ({
-          color:  s.color,
-          points: s.points.map(p => ({
-            x: Math.round(p.x * 100) / 100,
-            y: Math.round(p.y * 100) / 100
-          }))
-        }))
+      out.letters[l.char] = {
+        name: l.name,
+        index: i + 1,
+        strokes: savedData[i].strokes,
+        boundingBox: savedData[i].bounds
       };
     }
   });
+
   return out;
 }
 
@@ -1044,18 +1401,23 @@ function toggleExport() {
   // Auto-save current if has unsaved strokes
   if ((strokes.length > 0 || currentPts.length >= 2) && !savedData[currentIdx]) doSave();
 
-  const out = buildExportData();
-  if (Object.keys(out).length === 0) { showToast('Save some letters first!'); return; }
+  const data = buildExportData();
+  const letters = Object.keys(data.letters);
+  if (letters.length === 0) { showToast('Save some letters first!'); return; }
 
-  const json = JSON.stringify(out, null, 2);
+  const json = JSON.stringify(data, null, 2);
   document.getElementById('outputBox').value = json;
 
   // Stats
-  const total    = Object.keys(out).length;
-  const totalSt  = Object.values(out).reduce((a, l) => a + l.strokes.length, 0);
-  const totalPts = Object.values(out).reduce((a, l) =>
-    a + l.strokes.reduce((b, s) => b + s.points.length, 0), 0);
+  const total = letters.length;
+  let totalSt = 0, totalPts = 0;
+  Object.values(data.letters).forEach(l => {
+    totalSt += l.strokes.length;
+    totalPts += l.strokes.reduce((a, s) => a + s.points.length, 0);
+  });
+
   document.getElementById('exportStats').innerHTML = `
+    <div class="export-stat">Format: <span>v1.0 normalized</span></div>
     <div class="export-stat">Letters: <span>${total}</span></div>
     <div class="export-stat">Strokes: <span>${totalSt}</span></div>
     <div class="export-stat">Points: <span>${totalPts}</span></div>
@@ -1071,7 +1433,6 @@ function copyJSON() {
   const txt = document.getElementById('outputBox').value;
   if (!txt) { showToast('Nothing to copy'); return; }
   navigator.clipboard.writeText(txt).then(() => showToast('📋 JSON copied!')).catch(() => {
-    // Fallback
     document.getElementById('outputBox').select();
     document.execCommand('copy');
     showToast('📋 Copied!');
@@ -1083,7 +1444,7 @@ function downloadJSON() {
   if (!txt) { showToast('Nothing to download'); return; }
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
-  a.download = 'tibetan_strokes.json';
+  a.download = 'tibetan_strokes_v1.json';
   a.click();
   showToast('⬇ Downloading…');
 }
@@ -1120,14 +1481,19 @@ buildGrid();
 updateHeader();
 
 document.fonts.ready.then(() => {
-  // Small delay to ensure layout is complete
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       setupCanvas();
       drawBg();
       // Load saved strokes for first letter if any
       if (savedData[0]) {
-        strokes = savedData[0].map(s => ({ ...s, points: [...s.points] }));
+        const saved = savedData[0];
+        strokes = saved.strokes.map((s, i) => ({
+          color: COLORS[i % COLORS.length],
+          points: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
+          rawPoints: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
+          stats: { raw: 0, filtered: s.points.length, simplified: s.points.length, final: s.points.length }
+        }));
         updateStrokesList();
         redraw();
       }

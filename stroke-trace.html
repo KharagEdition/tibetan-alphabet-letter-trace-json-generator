@@ -129,7 +129,7 @@ textarea#jsonInput:focus{border-color:var(--accent)}
     <canvas id="trCanvas"></canvas>
     <canvas id="guCanvas"></canvas>
   </div>
-  <div class="hint" id="hint">Follow the blue dot — trace along the letter path</div>
+  <div class="hint" id="hint">Follow the numbered waypoints — trace along the letter path</div>
   <div class="controls">
     <button class="btn-c"      id="btnPrev"  onclick="prevLetter()">← Prev</button>
     <button class="btn-c"      id="btnReset" onclick="resetLetter()">↺ Retry</button>
@@ -138,10 +138,205 @@ textarea#jsonInput:focus{border-color:var(--accent)}
 </div>
 
 <script>
-/* ── STATE ───────────────────────────────────────────── */
-let letters=[],lIdx=0,sIdx=0,fillIdx=0,done={},isDown=false,normSt=[];
-const PROX=28, INK_C='#1E293B', DONE_C='#15803D', GUIDE_C='#1D4ED8';
+/* ═══════════════════════════════════════════════════════
+   CONFIGURATION CONSTANTS
+═══════════════════════════════════════════════════════ */
+const CONFIG = {
+  TOLERANCE_RATIO: 0.08,           // 8% of canvas size for tracing tolerance
+  GUIDE_DOT_SPACING: 0.05,         // Spacing for dotted guide line (normalized)
+  KEY_POINT_ANGLE_THRESHOLD: Math.PI / 5,  // 36 degrees for corner detection
+  PROGRESS_GRANULARITY: 2,          // Pixels per progress step
+};
 
+/* ═══════════════════════════════════════════════════════
+   GEOMETRY UTILITIES
+═══════════════════════════════════════════════════════ */
+
+/**
+ * Calculate Euclidean distance between two points
+ */
+function distance(p1, p2) {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/**
+ * Calculate distance from point p to line segment vw
+ */
+function distanceToSegment(p, v, w) {
+  const l2 = (w.x - v.x) ** 2 + (w.y - v.y) ** 2;
+  if (l2 === 0) return distance(p, v);
+
+  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+
+  const projection = {
+    x: v.x + t * (w.x - v.x),
+    y: v.y + t * (w.y - v.y)
+  };
+
+  return distance(p, projection);
+}
+
+/**
+ * Calculate angle between three points (p0-p1-p2)
+ * Returns the interior angle in radians
+ */
+function calculateAngle(p0, p1, p2) {
+  const v1 = { x: p0.x - p1.x, y: p0.y - p1.y };
+  const v2 = { x: p2.x - p1.x, y: p2.y - p1.y };
+
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const cross = v1.x * v2.y - v1.y * v2.x;
+
+  return Math.atan2(Math.abs(cross), dot);
+}
+
+/**
+ * Find the closest point on a polyline to a given point
+ * Returns the point and the index of the segment
+ */
+function findClosestPointOnPath(points, userPoint) {
+  let minDist = Infinity;
+  let closestPoint = points[0];
+  let closestIndex = 0;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p = points[i];
+    const p2 = points[i + 1];
+
+    // Find closest point on this segment
+    const l2 = (p2.x - p.x) ** 2 + (p2.y - p.y) ** 2;
+    if (l2 === 0) {
+      const d = distance(userPoint, p);
+      if (d < minDist) {
+        minDist = d;
+        closestPoint = p;
+        closestIndex = i;
+      }
+      continue;
+    }
+
+    let t = ((userPoint.x - p.x) * (p2.x - p.x) + (userPoint.y - p.y) * (p2.y - p.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+
+    const proj = {
+      x: p.x + t * (p2.x - p.x),
+      y: p.y + t * (p2.y - p.y)
+    };
+
+    const d = distance(userPoint, proj);
+    if (d < minDist) {
+      minDist = d;
+      closestPoint = proj;
+      closestIndex = i;
+    }
+  }
+
+  // Check last point
+  const lastPoint = points[points.length - 1];
+  const d = distance(userPoint, lastPoint);
+  if (d < minDist) {
+    minDist = d;
+    closestPoint = lastPoint;
+    closestIndex = points.length - 1;
+  }
+
+  return { point: closestPoint, index: closestIndex, distance: minDist };
+}
+
+/**
+ * Get cumulative distance at a point index along a stroke
+ */
+function getDistanceAtPoint(points, index) {
+  let dist = 0;
+  for (let i = 1; i <= index && i < points.length; i++) {
+    dist += distance(points[i - 1], points[i]);
+  }
+  return dist;
+}
+
+/**
+ * Get total length of a stroke
+ */
+function getStrokeLength(points) {
+  return getDistanceAtPoint(points, points.length - 1);
+}
+
+/**
+ * Extract key points from a stroke path
+ * Detects start, end, and direction change points (corners/curves)
+ */
+function extractKeyPoints(points) {
+  if (points.length <= 2) {
+    return points.map((p, i) => ({ point: p, index: i, type: i === 0 ? 'start' : 'end' }));
+  }
+
+  const keyPoints = [{ point: points[0], index: 0, type: 'start' }];
+
+  // Look for direction changes
+  for (let i = 2; i < points.length - 2; i++) {
+    const angle = calculateAngle(points[i - 1], points[i], points[i + 1]);
+
+    if (angle > CONFIG.KEY_POINT_ANGLE_THRESHOLD) {
+      // This is a corner or sharp curve
+      keyPoints.push({ point: points[i], index: i, type: 'corner' });
+    }
+  }
+
+  keyPoints.push({ point: points[points.length - 1], index: points.length - 1, type: 'end' });
+
+  return keyPoints;
+}
+
+/**
+ * Generate evenly spaced waypoints along a stroke for smooth progress tracking
+ */
+function generateWaypoints(points, spacing) {
+  if (points.length < 2) return points;
+
+  const waypoints = [points[0]];
+  let accumulatedDist = 0;
+  let targetDist = spacing;
+
+  for (let i = 1; i < points.length; i++) {
+    const segLen = distance(points[i - 1], points[i]);
+
+    while (accumulatedDist + segLen >= targetDist && i < points.length) {
+      const t = (targetDist - accumulatedDist) / segLen;
+      const interp = {
+        x: points[i - 1].x + t * (points[i].x - points[i - 1].x),
+        y: points[i - 1].y + t * (points[i].y - points[i - 1].y)
+      };
+      waypoints.push(interp);
+      targetDist += spacing;
+    }
+
+    accumulatedDist += segLen;
+  }
+
+  // Always include the last point
+  waypoints.push(points[points.length - 1]);
+
+  return waypoints;
+}
+
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+let letters=[],lIdx=0,sIdx=0,done={},isDown=false;
+
+// Tracking state
+let currentProgress = 0;      // Current distance along stroke (in pixels)
+let strokeTotalLength = 0;    // Total length of current stroke
+let tolerance = 0;            // Current tolerance in pixels
+let isOffPath = false;        // User is outside tolerance
+
+// Normalized stroke data (0-1 coordinates)
+let normStrokes = [];
+
+// Canvas state
 const bgC=document.getElementById('bgCanvas');
 const trC=document.getElementById('trCanvas');
 const guC=document.getElementById('guCanvas');
@@ -152,25 +347,13 @@ let bgX,trX,guX,CS,DPR;
   ═══════════════════════════════════════════════════════
   CORE APPROACH — "FOG OF WAR" REVEAL
   ═══════════════════════════════════════════════════════
-  Two offscreen canvases are built per letter:
-    • letterInkCanvas  — full glyph in dark ink
-    • letterDoneCanvas — full glyph in green
-    • revealCanvas     — starts empty; we PAINT onto it
-                         with a fat round brush as the
-                         user traces each stroke path.
-  
-  redrawTrace() composites:
-    letter ∩ reveal → trCanvas
-  
-  Because we're revealing the actual pre-rendered font
-  glyph, the result is always 100% identical to the
-  ghost letter — guaranteed, regardless of stroke path.
-  ═══════════════════════════════════════════════════════
 */
 let letterInkCanvas=null, letterDoneCanvas=null;
 let revealCanvas=null, rvX=null;
 
-/* ── JSON LOAD ───────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════
+   JSON LOAD
+═══════════════════════════════════════════════════════ */
 function loadJSON(){
   const raw=document.getElementById('jsonInput').value.trim();
   const errEl=document.getElementById('pasteError');
@@ -179,23 +362,40 @@ function loadJSON(){
   let parsed;
   try{parsed=JSON.parse(raw);}catch(e){showErr('Invalid JSON.');return;}
   letters=[];
-  if(Array.isArray(parsed)){
+
+  // Handle new v1.0 format
+  if (parsed.version === "1.0" && parsed.coordinateSystem === "normalized-0-1") {
+    Object.entries(parsed.letters || {}).forEach(([char, data]) => {
+      letters.push({
+        char: char,
+        name: data.name || char,
+        desc: '',
+        index: data.index || 0,
+        strokes: data.strokes || []
+      });
+    });
+  }
+  // Handle old format
+  else if(Array.isArray(parsed)){
     letters=parsed.filter(l=>l.char&&l.strokes&&l.strokes.length);
   }else if(typeof parsed==='object'){
     Object.entries(parsed).forEach(([char,v])=>{
       if(v&&v.strokes&&v.strokes.length)
         letters.push({char,name:v.name||char,desc:'',index:v.index||0,strokes:v.strokes});
     });
-    letters.sort((a,b)=>a.index-b.index);
   }
+
+  letters.sort((a,b)=>a.index-b.index);
+
   if(!letters.length){showErr('No valid letters found.');return;}
   done={};lIdx=0;showTrace();
 }
+
 function showErr(m){const el=document.getElementById('pasteError');el.textContent=m;el.style.display='block';}
 function showPaste(){document.getElementById('screenPaste').style.display='flex';document.getElementById('screenTrace').style.display='none';}
 function showTrace(){document.getElementById('screenPaste').style.display='none';document.getElementById('screenTrace').style.display='flex';buildStrip();loadLetter(0);}
 
-/* ── CANVAS SETUP ────────────────────────────────────── */
+/* ╀─ CANVAS SETUP ────────────────────────────────────── */
 function setupCanvas(){
   DPR=window.devicePixelRatio||1;
   const r=wrap.getBoundingClientRect();
@@ -241,32 +441,110 @@ function initRevealCanvas(){
   rvX.scale(DPR,DPR);
 }
 
-/*
-  Brush radius for the reveal paint.
-  Must be wide enough that tracing along the stroke
-  centerline fully uncovers the font's thick calligraphic
-  strokes on both sides. 10% of canvas size works well.
-*/
 const BR=()=>CS*0.10;
 
-/* Paint from point[fromIdx] to point[toIdx-1] on revealCanvas */
-function paintReveal(pts,fromIdx,toIdx){
-  if(toIdx<=fromIdx||fromIdx>=pts.length)return;
-  const r=BR();
-  const end=Math.min(toIdx,pts.length);
+/**
+ * Paint from progress distance along a stroke path
+ */
+function paintRevealFromProgress(strokePoints, fromDist, toDist) {
+  if (toDist <= fromDist) return;
+
+  const r = BR();
   rvX.save();
-  rvX.strokeStyle='#000';rvX.fillStyle='#000';
-  rvX.lineWidth=r*2;rvX.lineCap='round';rvX.lineJoin='round';
-  rvX.beginPath();
-  rvX.moveTo(pts[fromIdx].x,pts[fromIdx].y);
-  for(let i=fromIdx+1;i<end;i++) rvX.lineTo(pts[i].x,pts[i].y);
+  rvX.strokeStyle = '#000';
+  rvX.fillStyle = '#000';
+  rvX.lineWidth = r * 2;
+  rvX.lineCap = 'round';
+  rvX.lineJoin = 'round';
+
+  let accumulatedDist = 0;
+  let started = false;
+
+  for (let i = 1; i < strokePoints.length; i++) {
+    const segLen = distance(strokePoints[i - 1], strokePoints[i]);
+
+    if (!started && accumulatedDist + segLen > fromDist) {
+      // Start painting within this segment
+      started = true;
+      rvX.beginPath();
+      const t = (fromDist - accumulatedDist) / segLen;
+      const startX = strokePoints[i - 1].x + t * (strokePoints[i].x - strokePoints[i - 1].x);
+      const startY = strokePoints[i - 1].y + t * (strokePoints[i].y - strokePoints[i - 1].y);
+      rvX.moveTo(startX, startY);
+    }
+
+    if (started) {
+      if (accumulatedDist + segLen >= toDist) {
+        // End painting within this segment
+        const t = (toDist - accumulatedDist) / segLen;
+        const endX = strokePoints[i - 1].x + t * (strokePoints[i].x - strokePoints[i - 1].x);
+        const endY = strokePoints[i - 1].y + t * (strokePoints[i].y - strokePoints[i - 1].y);
+        rvX.lineTo(endX, endY);
+        rvX.stroke();
+        break;
+      } else {
+        rvX.lineTo(strokePoints[i].x, strokePoints[i].y);
+      }
+    }
+
+    accumulatedDist += segLen;
+  }
+
   rvX.stroke();
-  // Solid circle cap at the leading edge
-  rvX.beginPath();rvX.arc(pts[end-1].x,pts[end-1].y,r,0,Math.PI*2);rvX.fill();
+
+  // Circle cap at current position
+  if (started) {
+    const currentPoint = getPointAtDistance(strokePoints, toDist);
+    if (currentPoint) {
+      rvX.beginPath();
+      rvX.arc(currentPoint.x, currentPoint.y, r, 0, Math.PI * 2);
+      rvX.fill();
+    }
+  }
+
   rvX.restore();
 }
 
-function paintStrokeFull(pts){paintReveal(pts,0,pts.length);}
+/**
+ * Get point at a specific distance along a stroke
+ */
+function getPointAtDistance(points, targetDist) {
+  let accumulatedDist = 0;
+
+  for (let i = 1; i < points.length; i++) {
+    const segLen = distance(points[i - 1], points[i]);
+
+    if (accumulatedDist + segLen >= targetDist) {
+      const t = (targetDist - accumulatedDist) / segLen;
+      return {
+        x: points[i - 1].x + t * (points[i].x - points[i - 1].x),
+        y: points[i - 1].y + t * (points[i].y - points[i - 1].y)
+      };
+    }
+
+    accumulatedDist += segLen;
+  }
+
+  return points[points.length - 1];
+}
+
+function paintStrokeFull(strokePoints){
+  if (strokePoints.length < 2) return;
+  const r = BR();
+  rvX.save();
+  rvX.strokeStyle = '#000';
+  rvX.fillStyle = '#000';
+  rvX.lineWidth = r * 2;
+  rvX.lineCap = 'round';
+  rvX.lineJoin = 'round';
+  rvX.beginPath();
+  rvX.moveTo(strokePoints[0].x, strokePoints[0].y);
+  for (let i = 1; i < strokePoints.length; i++) {
+    rvX.lineTo(strokePoints[i].x, strokePoints[i].y);
+  }
+  rvX.stroke();
+  rvX.restore();
+}
 
 /* ── REDRAW TRACE ────────────────────────────────────── */
 function redrawTrace(){
@@ -274,31 +552,28 @@ function redrawTrace(){
   if(!letterInkCanvas||!revealCanvas)return;
 
   if(done[lIdx]){
-    // Complete — show the full green letter directly
     trX.save();trX.setTransform(1,0,0,1,0,0);
     trX.drawImage(letterDoneCanvas,0,0);
     trX.restore();
     return;
   }
 
-  // Composite: letter × reveal mask
   const tmp=document.createElement('canvas');
   tmp.width=Math.round(CS*DPR);tmp.height=Math.round(CS*DPR);
   const tx=tmp.getContext('2d');
 
-  // 1) Draw the pre-rendered letter
   tx.drawImage(letterInkCanvas,0,0);
-  // 2) Clip: keep only pixels that the reveal mask has painted
   tx.globalCompositeOperation='destination-in';
   tx.drawImage(revealCanvas,0,0);
 
-  // 3) Blit raw pixels (bypass DPR scaling on trX)
   trX.save();trX.setTransform(1,0,0,1,0,0);
   trX.drawImage(tmp,0,0);
   trX.restore();
 }
 
 /* ── DRAW BACKGROUND ─────────────────────────────────── */
+const INK_C='#1E293B', DONE_C='#15803D', GUIDE_C='#1D4ED8';
+
 function drawBg(char){
   bgX.clearRect(0,0,CS,CS);
   bgX.strokeStyle='#E9ECF6';bgX.lineWidth=1;bgX.setLineDash([3,6]);
@@ -310,7 +585,7 @@ function drawBg(char){
   bgX.strokeStyle='#D8DCF0';bgX.lineWidth=1;
   bgX.beginPath();bgX.moveTo(CS/2,0);bgX.lineTo(CS/2,CS);bgX.stroke();
   bgX.beginPath();bgX.moveTo(0,CS/2);bgX.lineTo(CS,CS/2);bgX.stroke();
-  // Ghost — faint outline to trace over
+
   bgX.save();bgX.globalAlpha=0.08;
   renderGlyph(bgX,char,INK_C);
   bgX.restore();
@@ -319,96 +594,156 @@ function drawBg(char){
 /* ── DRAW GUIDE ──────────────────────────────────────── */
 function drawGuide(){
   guX.clearRect(0,0,CS,CS);
-  if(done[lIdx]||sIdx>=normSt.length)return;
-  const pts=normSt[sIdx].points;
+  if(done[lIdx]||sIdx>=normStrokes.length)return;
+  const pts=normStrokes[sIdx];
   if(pts.length<2)return;
 
+  // Convert normalized points to screen coordinates
+  const screenPts = pts.map(p => ({ x: p.x * CS, y: p.y * CS }));
+
+  // Extract key points for waypoint display
+  const keyPoints = extractKeyPoints(screenPts);
+
   // ── Dotted path line ──
-  guX.save();guX.setLineDash([5,8]);
-  guX.strokeStyle='rgba(29,78,216,0.22)';guX.lineWidth=3;guX.lineCap='round';guX.lineJoin='round';
-  guX.beginPath();guX.moveTo(pts[0].x,pts[0].y);
-  for(let i=1;i<pts.length-1;i++){
-    const mx=(pts[i].x+pts[i+1].x)/2,my=(pts[i].y+pts[i+1].y)/2;
-    guX.quadraticCurveTo(pts[i].x,pts[i].y,mx,my);
+  guX.save();
+  guX.setLineDash([4,6]);
+  guX.strokeStyle='rgba(29,78,216,0.2)';
+  guX.lineWidth=2.5;
+  guX.lineCap='round';
+  guX.lineJoin='round';
+  guX.beginPath();
+  guX.moveTo(screenPts[0].x, screenPts[0].y);
+  for(let i=1;i<screenPts.length-1;i++){
+    const mx=(screenPts[i].x+screenPts[i+1].x)/2;
+    const my=(screenPts[i].y+screenPts[i+1].y)/2;
+    guX.quadraticCurveTo(screenPts[i].x,screenPts[i].y,mx,my);
   }
-  guX.lineTo(pts[pts.length-1].x,pts[pts.length-1].y);
-  guX.stroke();guX.restore();
+  guX.lineTo(screenPts[screenPts.length-1].x,screenPts[screenPts.length-1].y);
+  guX.stroke();
+  guX.restore();
 
-  // ── Numbered waypoints — evenly spaced along the stroke ──
-  // Pick up to 8 numbered stops (start + end + up to 6 in between)
-  const maxPts = Math.min(pts.length, 8);
-  const step   = (pts.length - 1) / (maxPts - 1);
-  const dotR   = Math.max(10, CS * 0.025);
-  const fontSize = Math.max(10, CS * 0.028);
+  // ── Key point markers ──
+  const dotR = Math.max(8, CS * 0.02);
+  const fontSize = Math.max(9, CS * 0.025);
 
-  for(let n = 0; n < maxPts; n++){
-    const idx  = Math.round(n * step);
-    const p    = pts[idx];
-    const reached = idx < fillIdx;
-    const isCurrent = !reached && idx >= fillIdx && (n === 0 || Math.round((n-1)*step) < fillIdx);
+  keyPoints.forEach((kp, n) => {
+    const p = kp.point;
+    const reached = getDistanceAtPoint(screenPts, kp.index) < currentProgress;
+
+    // Determine if this is the current target
+    const isCurrent = !reached && n === 0;
+    const nextUnreachedIndex = keyPoints.findIndex(kp => getDistanceAtPoint(screenPts, kp.index) >= currentProgress);
+    const isNextTarget = n === nextUnreachedIndex;
 
     // Outer glow for current target
-    if(isCurrent && n === 0){
-      guX.beginPath();guX.arc(p.x,p.y,dotR+6,0,Math.PI*2);
-      guX.fillStyle='rgba(29,78,216,0.10)';guX.fill();
+    if (isNextTarget) {
+      guX.beginPath();
+      guX.arc(p.x, p.y, dotR + 5, 0, Math.PI * 2);
+      guX.fillStyle = 'rgba(29,78,216,0.15)';
+      guX.fill();
     }
 
     // Dot fill
-    guX.beginPath();guX.arc(p.x,p.y,dotR,0,Math.PI*2);
-    if(reached){
-      guX.fillStyle='rgba(21,128,61,0.85)';  // green — already passed
+    guX.beginPath();
+    guX.arc(p.x, p.y, dotR, 0, Math.PI * 2);
+    if (reached) {
+      guX.fillStyle = 'rgba(21,128,61,0.85)';
+    } else if (isNextTarget) {
+      guX.fillStyle = GUIDE_C;
     } else {
-      guX.fillStyle=isCurrent&&n===0?GUIDE_C:'rgba(29,78,216,0.50)';
+      guX.fillStyle = 'rgba(29,78,216,0.4)';
     }
     guX.fill();
 
     // White border
-    guX.beginPath();guX.arc(p.x,p.y,dotR,0,Math.PI*2);
-    guX.strokeStyle='rgba(255,255,255,0.9)';guX.lineWidth=2;guX.stroke();
+    guX.beginPath();
+    guX.arc(p.x, p.y, dotR, 0, Math.PI * 2);
+    guX.strokeStyle = 'rgba(255,255,255,0.9)';
+    guX.lineWidth = 1.5;
+    guX.stroke();
 
     // Number label
     guX.save();
-    guX.font=`700 ${fontSize}px "DM Sans",sans-serif`;
-    guX.textAlign='center';guX.textBaseline='middle';
-    guX.fillStyle='#fff';
-    guX.fillText(String(n+1),p.x,p.y+0.5);
+    guX.font = `700 ${fontSize}px "DM Sans", sans-serif`;
+    guX.textAlign = 'center';
+    guX.textBaseline = 'middle';
+    guX.fillStyle = '#fff';
+    guX.fillText(String(n + 1), p.x, p.y + 0.5);
     guX.restore();
+  });
+
+  // ── Current target position indicator ──
+  if (currentProgress < strokeTotalLength) {
+    const targetPoint = getPointAtDistance(screenPts, currentProgress);
+    if (targetPoint) {
+      guX.beginPath();
+      guX.arc(targetPoint.x, targetPoint.y, CS * 0.014, 0, Math.PI * 2);
+      guX.fillStyle = isOffPath ? '#DC2626' : GUIDE_C;
+      guX.fill();
+      guX.beginPath();
+      guX.arc(targetPoint.x, targetPoint.y, CS * 0.014, 0, Math.PI * 2);
+      guX.strokeStyle = 'rgba(255,255,255,0.8)';
+      guX.lineWidth = 2;
+      guX.stroke();
+    }
   }
 
-  // ── Moving blue dot at exact current target position ──
-  if(fillIdx < pts.length){
-    const tp=pts[fillIdx];
-    guX.beginPath();guX.arc(tp.x,tp.y,CS*0.016,0,Math.PI*2);
-    guX.fillStyle=GUIDE_C;guX.fill();
-    guX.beginPath();guX.arc(tp.x,tp.y,CS*0.016,0,Math.PI*2);
-    guX.strokeStyle='rgba(255,255,255,0.8)';guX.lineWidth=2;guX.stroke();
-  }
-}
+  // ── Progress bar ──
+  const progressRatio = currentProgress / strokeTotalLength;
+  const barWidth = CS * 0.6;
+  const barHeight = 4;
+  const barX = (CS - barWidth) / 2;
+  const barY = CS - 20;
 
-/* ── NORMALISE ───────────────────────────────────────── */
-function normalise(raw,size){
-  let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;
-  raw.forEach(s=>s.points.forEach(p=>{
-    if(p.x<mnX)mnX=p.x;if(p.y<mnY)mnY=p.y;if(p.x>mxX)mxX=p.x;if(p.y>mxY)mxY=p.y;
-  }));
-  const rX=mxX-mnX||1,rY=mxY-mnY||1,r=Math.max(rX,rY);
-  const pad=size*0.13,avail=size-pad*2,sc=avail/r;
-  const ox=pad+(avail-rX*sc)/2-mnX*sc,oy=pad+(avail-rY*sc)/2-mnY*sc;
-  return raw.map(s=>({...s,points:s.points.map(p=>({x:p.x*sc+ox,y:p.y*sc+oy}))}));
+  guX.fillStyle = 'rgba(0,0,0,0.1)';
+  guX.fillRect(barX, barY, barWidth, barHeight);
+
+  guX.fillStyle = isOffPath ? '#DC2626' : GUIDE_C;
+  guX.fillRect(barX, barY, barWidth * progressRatio, barHeight);
 }
 
 /* ── LOAD LETTER ─────────────────────────────────────── */
 function loadLetter(idx){
-  lIdx=idx;sIdx=0;fillIdx=0;isDown=false;
+  lIdx=idx;
+  sIdx=0;
+  currentProgress=0;
+  isDown=false;
+  isOffPath=false;
   const l=letters[idx];
   setupCanvas();
-  normSt=normalise(l.strokes,CS);
+
+  // Store normalized strokes directly
+  normStrokes = l.strokes.map(s => s.points || []);
+
+  // Calculate initial stroke length
+  if (normStrokes.length > 0) {
+    const screenPts = normStrokes[0].map(p => ({ x: p.x * CS, y: p.y * CS }));
+    strokeTotalLength = getStrokeLength(screenPts);
+  } else {
+    strokeTotalLength = 0;
+  }
+
+  // Set tolerance
+  tolerance = CS * CONFIG.TOLERANCE_RATIO;
+
   buildLetterCanvases(l.char);
   initRevealCanvas();
   drawBg(l.char);
-  if(done[lIdx]) normSt.forEach(s=>paintStrokeFull(s.points));
-  redrawTrace();drawGuide();
-  updateInfoBar();updateHint();updateControls();updateStrip();
+
+  if(done[lIdx]){
+    normStrokes.forEach(pts=>{
+      const screenPts=pts.map(p=>({x:p.x*CS,y:p.y*CS}));
+      paintStrokeFull(screenPts);
+    });
+  }
+
+  redrawTrace();
+  drawGuide();
+  updateInfoBar();
+  updateHint();
+  updateControls();
+  updateStrip();
+
   const btn=document.getElementById(`ls-${idx}`);
   if(btn)btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
 }
@@ -418,30 +753,78 @@ function getPos(e){
   const r=wrap.getBoundingClientRect(),src=e.touches?e.touches[0]:e;
   return{x:(src.clientX-r.left)*(CS/r.width),y:(src.clientY-r.top)*(CS/r.height)};
 }
-function dst(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.sqrt(dx*dx+dy*dy);}
 
 function onMove(pos){
-  if(!isDown||done[lIdx]||sIdx>=normSt.length)return;
-  const pts=normSt[sIdx].points;
-  let adv=false;
-  const prev=fillIdx;
-  while(fillIdx<pts.length&&dst(pos,pts[fillIdx])<PROX){fillIdx++;adv=true;}
-  if(adv){
-    paintReveal(pts,prev,fillIdx);   // incremental paint — only new segment
-    redrawTrace();drawGuide();updateInfoBar();
-    if(fillIdx>=pts.length){
-      sIdx++;fillIdx=0;
-      if(sIdx>=normSt.length){
-        done[lIdx]=true;
-        normSt.forEach(s=>paintStrokeFull(s.points)); // fill any gaps
-        redrawTrace();guX.clearRect(0,0,CS,CS);updateStrip();
+  if(!isDown||done[lIdx]||sIdx>=normStrokes.length)return;
+
+  const pts = normStrokes[sIdx];
+  const screenPts = pts.map(p => ({ x: p.x * CS, y: p.y * CS }));
+
+  // Find closest point on stroke path
+  const closest = findClosestPointOnPath(screenPts, pos);
+  const distToPath = closest.distance;
+
+  // Check if within tolerance
+  isOffPath = distToPath > tolerance;
+
+  if (!isOffPath) {
+    // Calculate distance along the stroke to this point
+    const distAlong = getDistanceAtPoint(screenPts, closest.index) +
+                      distance(screenPts[closest.index], closest.point);
+
+    // Only advance if we're moving forward
+    if (distAlong > currentProgress) {
+      const prevProgress = currentProgress;
+      currentProgress = Math.min(distAlong, strokeTotalLength);
+
+      // Paint the new segment
+      paintRevealFromProgress(screenPts, prevProgress, currentProgress);
+      redrawTrace();
+      drawGuide();
+      updateInfoBar();
+
+      // Check if stroke complete
+      if (currentProgress >= strokeTotalLength * 0.98) {
+        sIdx++;
+        currentProgress = 0;
+
+        if (sIdx >= normStrokes.length) {
+          done[lIdx] = true;
+          normStrokes.forEach(p => {
+            const sp = p.map(pt => ({ x: pt.x * CS, y: pt.y * CS }));
+            paintStrokeFull(sp);
+          });
+          redrawTrace();
+          guX.clearRect(0, 0, CS, CS);
+          updateStrip();
+        } else {
+          // Set up next stroke
+          const nextScreenPts = normStrokes[sIdx].map(p => ({ x: p.x * CS, y: p.y * CS }));
+          strokeTotalLength = getStrokeLength(nextScreenPts);
+        }
+
+        drawGuide();
+        updateInfoBar();
+        updateHint();
+        updateControls();
       }
-      drawGuide();updateInfoBar();updateHint();updateControls();
     }
+  } else {
+    // Off path - update guide to show error
+    drawGuide();
   }
 }
-guC.addEventListener('pointerdown',e=>{e.preventDefault();guC.setPointerCapture(e.pointerId);isDown=true;onMove(getPos(e));});
-guC.addEventListener('pointermove',e=>{e.preventDefault();onMove(getPos(e));});
+
+guC.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  guC.setPointerCapture(e.pointerId);
+  isDown=true;
+  onMove(getPos(e));
+});
+guC.addEventListener('pointermove',e=>{
+  e.preventDefault();
+  onMove(getPos(e));
+});
 guC.addEventListener('pointerup',()=>{isDown=false;});
 guC.addEventListener('pointercancel',()=>{isDown=false;});
 
@@ -459,14 +842,16 @@ function buildStrip(){
     b.onclick=()=>loadLetter(i);s.appendChild(b);
   });
 }
+
 function updateStrip(){
   letters.forEach((_,i)=>{
     const b=document.getElementById(`ls-${i}`);if(!b)return;
     b.className='ls-btn'+(i===lIdx?' active':'')+(done[i]?' done':'');
   });
 }
+
 function updateInfoBar(){
-  const l=letters[lIdx],ns=normSt.length,si=Math.min(sIdx,ns-1),isDone=done[lIdx];
+  const l=letters[lIdx],ns=normStrokes.length,si=Math.min(sIdx,ns-1),isDone=done[lIdx];
   document.getElementById('ibChar').textContent=l.char;
   document.getElementById('ibName').textContent=l.name;
   document.getElementById('ibDesc').textContent=l.desc||('Consonant '+(lIdx+1));
@@ -474,21 +859,46 @@ function updateInfoBar(){
   chip.textContent=isDone?'Complete ✓':`Stroke ${si+1} of ${ns}`;
   chip.className='stroke-chip'+(isDone?' done-chip':'');
   const dots=document.getElementById('strokeDots');dots.innerHTML='';
-  for(let i=0;i<ns;i++){const d=document.createElement('div');d.className='sdot'+(isDone||i<sIdx?' complete':(i===sIdx?' active':''));dots.appendChild(d);}
+  for(let i=0;i<ns;i++){
+    const d=document.createElement('div');
+    d.className='sdot'+(isDone||i<sIdx?' complete':(i===sIdx?' active':''));
+    dots.appendChild(d);
+  }
 }
+
 function updateHint(){
   const el=document.getElementById('hint');
-  if(done[lIdx]){el.textContent='✓ Letter complete! Tap "Next →" to continue.';el.className='hint done';}
-  else{el.textContent=`Trace stroke ${sIdx+1} of ${normSt.length} — follow the blue dot`;el.className='hint active';}
+  if(done[lIdx]){
+    el.textContent='✓ Letter complete! Tap "Next →" to continue.';
+    el.className='hint done';
+  } else if(isOffPath){
+    el.textContent='⚠️ Stay on the dotted path — you went off track!';
+    el.className='hint active';
+    el.style.color='#DC2626';
+    el.style.borderColor='#FECACA';
+    el.style.backgroundColor='#FEF2F2';
+  } else{
+    const progress = Math.round((currentProgress / strokeTotalLength) * 100);
+    el.textContent=`Trace stroke ${sIdx+1} of ${normStrokes.length} — follow the numbered waypoints (${progress}%)`;
+    el.className='hint active';
+    el.style.color='';
+    el.style.borderColor='';
+    el.style.backgroundColor='';
+  }
 }
+
 function updateControls(){
   document.getElementById('btnPrev').disabled=lIdx===0;
   document.getElementById('btnNext').disabled=lIdx===letters.length-1;
   const n=document.getElementById('btnNext');
   n.className=done[lIdx]&&lIdx<letters.length-1?'btn-c success':'btn-c dark';
 }
+
 let _rt;
-window.addEventListener('resize',()=>{clearTimeout(_rt);_rt=setTimeout(()=>{if(letters.length)loadLetter(lIdx);},150);});
+window.addEventListener('resize',()=>{
+  clearTimeout(_rt);
+  _rt=setTimeout(()=>{if(letters.length)loadLetter(lIdx);},150);
+});
 </script>
 </body>
 </html>
