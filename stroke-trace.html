@@ -4,94 +4,181 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Tibetan Letter Tracer</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Serif+Tibetan:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@500&family=Noto+Serif+Tibetan:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#F2F4F8;--surface:#FFFFFF;--border:#DDE2EF;--text-1:#0F172A;--text-2:#475569;
-  --text-3:#94A3B8;--accent:#1D4ED8;--accent-lt:#EFF6FF;--green:#15803D;
-  --green-lt:#F0FDF4;--ink:#1E293B;--radius:14px;--shadow:0 2px 16px rgba(0,0,0,0.07);
-  --canvas-size:min(420px,calc(100vw - 40px));
+  --bg:        #F3F5FA;
+  --surface:   #FFFFFF;
+  --border:    #E2E7F0;
+  --text-1:    #111827;
+  --text-2:    #4B5563;
+  --text-3:    #9CA3AF;
+  --accent:    #2563EB;
+  --accent-lt: #EFF6FF;
+  --green:     #15803D;
+  --green-lt:  #F0FDF4;
+  --red:       #DC2626;
+  --red-lt:    #FEF2F2;
+  --ink:       #0F172A;
+  --radius:    14px;
+  --shadow:    0 2px 14px rgba(0,0,0,0.07);
+  --canvas-size: min(440px, calc(100vw - 32px));
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{height:100%}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;color:var(--text-1);
-  touch-action:none;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:13px 20px;
-  display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:50}
-.topbar-brand{display:flex;align-items:center;gap:10px}
-.topbar-logo{width:34px;height:34px;background:var(--ink);border-radius:9px;display:flex;
-  align-items:center;justify-content:center;font-family:'Noto Serif Tibetan',serif;color:#fff;font-size:1rem;flex-shrink:0}
-.topbar h1{font-size:.9rem;font-weight:700}
-.topbar h1 small{display:block;font-size:.72rem;font-weight:400;color:var(--text-3)}
-.btn-topbar{padding:6px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);
-  font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:700;color:var(--text-2);cursor:pointer;
-  white-space:nowrap;transition:border-color .12s,color .12s}
-.btn-topbar:hover{border-color:var(--accent);color:var(--accent)}
-#screenPaste{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;gap:20px}
-.paste-card{background:var(--surface);border-radius:18px;border:1px solid var(--border);box-shadow:var(--shadow);
-  padding:28px 24px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:16px}
-.paste-card h2{font-size:1.1rem;font-weight:700}
-.paste-card p{font-size:.82rem;color:var(--text-2);line-height:1.6}
-.paste-card p strong{color:var(--text-1)}
-textarea#jsonInput{width:100%;min-height:180px;resize:vertical;font-family:'Courier New',monospace;
-  font-size:.68rem;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;
-  background:#F8FAFC;color:var(--text-1);outline:none;line-height:1.5;transition:border-color .15s}
-textarea#jsonInput:focus{border-color:var(--accent)}
-.paste-error{font-size:.78rem;color:#DC2626;font-weight:600;display:none;padding:8px 12px;
-  background:#FEF2F2;border-radius:8px;border:1px solid #FECACA}
-.btn-primary{width:100%;padding:13px;border-radius:11px;border:none;background:var(--ink);color:white;
-  font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .14s}
-.btn-primary:hover{background:#0F172A}
-#screenTrace{display:none;flex:1;flex-direction:column;align-items:center;padding:16px 16px 32px;
-  gap:12px;max-width:520px;margin:0 auto;width:100%}
-.strip-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.strip-wrap::-webkit-scrollbar{display:none}
-.letter-strip{display:flex;gap:5px;padding:2px 0;width:max-content}
-.ls-btn{width:36px;height:36px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);
-  font-family:'Noto Serif Tibetan',serif;font-size:.95rem;color:var(--text-2);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  transition:border-color .1s,background .1s;position:relative}
-.ls-btn:hover{border-color:var(--accent);background:var(--accent-lt)}
-.ls-btn.active{border-color:var(--ink);background:var(--ink);color:white}
-.ls-btn.done{border-color:var(--green);background:var(--green-lt);color:var(--green)}
-.ls-btn.done::after{content:'✓';position:absolute;top:-4px;right:-4px;width:12px;height:12px;
-  background:var(--green);color:white;font-size:7px;font-family:'DM Sans',sans-serif;font-weight:700;
-  border-radius:50%;display:flex;align-items:center;justify-content:center}
-.info-bar{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
-.ib-char{font-family:'Noto Serif Tibetan',serif;font-size:1.9rem;width:50px;height:50px;background:var(--bg);
-  border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;color:var(--text-1);line-height:1}
-.ib-meta{flex:1;min-width:0}
-.ib-meta h2{font-size:.95rem;font-weight:700}
-.ib-meta p{font-size:.72rem;color:var(--text-3);font-weight:500;margin-top:1px}
-.ib-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
-.stroke-chip{font-size:.7rem;font-weight:700;color:white;background:var(--accent);padding:3px 10px;
-  border-radius:99px;white-space:nowrap}
-.stroke-chip.done-chip{background:var(--green)}
-.stroke-dots{display:flex;gap:4px}
-.sdot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .15s}
-.sdot.active{background:var(--accent)}
-.sdot.complete{background:var(--green)}
-.canvas-wrap{position:relative;width:var(--canvas-size);height:var(--canvas-size);border-radius:16px;
-  border:1.5px solid var(--border);background:#FAFBFF;touch-action:none;cursor:crosshair;
-  overflow:hidden;box-shadow:var(--shadow);flex-shrink:0}
-.canvas-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%}
-.hint{width:100%;font-size:.78rem;font-weight:500;color:var(--text-2);background:var(--surface);
-  border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center;line-height:1.5}
-.hint.active{border-color:var(--accent);background:var(--accent-lt);color:var(--accent);font-weight:600}
-.hint.done{border-color:var(--green);background:var(--green-lt);color:var(--green);font-weight:700}
-.controls{display:flex;gap:8px;width:100%}
-.btn-c{flex:1;padding:11px 8px;border-radius:11px;border:1.5px solid var(--border);background:var(--surface);
-  font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:700;color:var(--text-2);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:4px;
-  transition:border-color .1s,background .1s,color .1s}
-.btn-c:hover:not(:disabled){border-color:var(--accent);background:var(--accent-lt);color:var(--accent)}
-.btn-c.dark{background:var(--ink);border-color:var(--ink);color:white}
-.btn-c.dark:hover:not(:disabled){background:#0F172A}
-.btn-c.success{background:var(--green);border-color:var(--green);color:white}
-.btn-c.success:hover:not(:disabled){background:#14532D}
-.btn-c:disabled{opacity:.35;pointer-events:none}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg); min-height: 100vh; color: var(--text-1);
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  display: flex; flex-direction: column;
+}
+
+/* ── Top bar ── */
+.topbar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 12px 18px; display: flex; align-items: center;
+  justify-content: space-between; gap: 10px; position: sticky; top: 0; z-index: 50;
+}
+.topbar-brand { display: flex; align-items: center; gap: 9px; }
+.topbar-logo {
+  width: 32px; height: 32px; background: var(--ink); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Noto Serif Tibetan', serif; color: #fff; font-size: 0.95rem; flex-shrink: 0;
+}
+.topbar h1 { font-size: 0.88rem; font-weight: 700; line-height: 1.2; }
+.topbar h1 small { display: block; font-size: 0.7rem; font-weight: 400; color: var(--text-3); }
+.btn-sm {
+  padding: 5px 13px; border-radius: 7px; border: 1.5px solid var(--border);
+  background: var(--surface); font-family: 'DM Sans', sans-serif;
+  font-size: 0.73rem; font-weight: 700; color: var(--text-2); cursor: pointer;
+  white-space: nowrap; transition: border-color 0.1s, color 0.1s;
+}
+.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Paste Screen ── */
+#screenPaste {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 28px 18px; gap: 16px;
+}
+.paste-card {
+  background: var(--surface); border-radius: 18px; border: 1px solid var(--border);
+  box-shadow: var(--shadow); padding: 26px 22px; width: 100%; max-width: 460px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.paste-card h2 { font-size: 1.05rem; font-weight: 700; }
+.paste-card p  { font-size: 0.8rem; color: var(--text-2); line-height: 1.6; }
+.paste-card p strong { color: var(--text-1); }
+textarea#jsonInput {
+  width: 100%; min-height: 170px; resize: vertical;
+  font-family: 'DM Mono', monospace; font-size: 0.67rem;
+  padding: 11px 13px; border: 1.5px solid var(--border); border-radius: 9px;
+  background: #F8FAFC; color: var(--text-1); outline: none;
+  line-height: 1.5; transition: border-color 0.15s;
+}
+textarea#jsonInput:focus { border-color: var(--accent); }
+.paste-error {
+  font-size: 0.76rem; color: var(--red); font-weight: 600;
+  display: none; padding: 8px 12px; background: var(--red-lt);
+  border-radius: 8px; border: 1px solid #FECACA;
+}
+.btn-primary {
+  width: 100%; padding: 12px; border-radius: 10px; border: none;
+  background: var(--ink); color: white; font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.12s;
+}
+.btn-primary:hover { background: #1E293B; }
+
+/* ── Trace Screen ── */
+#screenTrace {
+  display: none; flex: 1; flex-direction: column; align-items: center;
+  padding: 14px 14px 28px; gap: 10px;
+  max-width: 520px; margin: 0 auto; width: 100%;
+}
+
+/* ── Letter Strip ── */
+.strip-wrap { width: 100%; overflow-x: auto; scrollbar-width: none; }
+.strip-wrap::-webkit-scrollbar { display: none; }
+.letter-strip { display: flex; gap: 4px; padding: 2px 0; width: max-content; }
+.ls-btn {
+  width: 34px; height: 34px; border-radius: 7px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  font-family: 'Noto Serif Tibetan', serif; font-size: 0.9rem; color: var(--text-2);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: border-color 0.1s, background 0.1s; position: relative;
+}
+.ls-btn:hover { border-color: var(--accent); background: var(--accent-lt); }
+.ls-btn.active { border-color: var(--ink); background: var(--ink); color: white; }
+.ls-btn.done   { border-color: var(--green); background: var(--green-lt); color: var(--green); }
+.ls-btn.done::after {
+  content: ''; position: absolute; top: -3px; right: -3px;
+  width: 7px; height: 7px; background: var(--green); border-radius: 50%;
+  border: 1.5px solid var(--bg);
+}
+
+/* ── Info Bar ── */
+.info-bar {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 13px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 11px; box-shadow: var(--shadow);
+}
+.ib-char {
+  font-family: 'Noto Serif Tibetan', serif; font-size: 1.7rem;
+  width: 46px; height: 46px; background: var(--bg); border-radius: 9px;
+  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; line-height: 1;
+}
+.ib-meta { flex: 1; min-width: 0; }
+.ib-meta h2 { font-size: 0.92rem; font-weight: 700; }
+.ib-meta p  { font-size: 0.7rem; color: var(--text-3); margin-top: 1px; }
+.ib-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.stroke-pill {
+  font-size: 0.68rem; font-weight: 700; color: white;
+  padding: 3px 9px; border-radius: 99px; white-space: nowrap;
+  background: var(--accent);
+}
+.stroke-pill.done  { background: var(--green); }
+.stroke-dots { display: flex; gap: 3px; }
+.sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+.sdot.active   { background: var(--accent); transform: scale(1.3); }
+.sdot.complete { background: var(--green); }
+
+/* ── Canvas ── */
+.canvas-wrap {
+  position: relative; width: var(--canvas-size); height: var(--canvas-size);
+  border-radius: 16px; border: 1.5px solid var(--border); background: #FAFBFF;
+  touch-action: none; cursor: crosshair; overflow: hidden;
+  box-shadow: var(--shadow); flex-shrink: 0;
+}
+.canvas-wrap canvas {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* ── Hint ── */
+.hint {
+  width: 100%; font-size: 0.76rem; font-weight: 500; color: var(--text-2);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; padding: 9px 13px; text-align: center; line-height: 1.5;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.hint.active { border-color: var(--accent); background: var(--accent-lt); color: var(--accent); font-weight: 600; }
+.hint.error  { border-color: #FECACA; background: var(--red-lt); color: var(--red); font-weight: 600; }
+.hint.done   { border-color: #BBF7D0; background: var(--green-lt); color: var(--green); font-weight: 700; }
+
+/* ── Controls ── */
+.controls { display: flex; gap: 7px; width: 100%; }
+.btn-c {
+  flex: 1; padding: 10px 7px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 700;
+  color: var(--text-2); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 4px;
+  transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+.btn-c:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-lt); color: var(--accent); }
+.btn-c.ink  { background: var(--ink); border-color: var(--ink); color: white; }
+.btn-c.ink:hover:not(:disabled) { background: #1E293B; border-color: #1E293B; }
+.btn-c.ok   { background: var(--green); border-color: var(--green); color: white; }
+.btn-c.ok:hover:not(:disabled) { background: #166534; }
+.btn-c:disabled { opacity: 0.32; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -99,805 +186,680 @@ textarea#jsonInput:focus{border-color:var(--accent)}
 <div class="topbar">
   <div class="topbar-brand">
     <div class="topbar-logo">ཀ</div>
-    <h1>Tibetan Tracer <small>Guided stroke-by-stroke tracing</small></h1>
+    <h1>Tibetan Tracer <small>Stroke-by-stroke practice</small></h1>
   </div>
-  <button class="btn-topbar" onclick="showPaste()">⬆ Load JSON</button>
+  <button class="btn-sm" onclick="showPaste()">⇪ Load JSON</button>
 </div>
 
+<!-- Paste Screen -->
 <div id="screenPaste">
   <div class="paste-card">
-    <h2>Load your stroke data</h2>
-    <p>Export JSON from the <strong>Stroke Recorder</strong>, then paste it below.</p>
-    <textarea id="jsonInput" placeholder='Paste JSON here…'></textarea>
+    <h2>Load stroke data</h2>
+    <p>Export JSON from the <strong>Stroke Recorder</strong>, then paste it below to begin tracing practice.</p>
+    <textarea id="jsonInput" placeholder="Paste recorder JSON here…"></textarea>
     <div class="paste-error" id="pasteError"></div>
     <button class="btn-primary" onclick="loadJSON()">Load Letters →</button>
   </div>
 </div>
 
+<!-- Trace Screen -->
 <div id="screenTrace">
   <div class="strip-wrap"><div class="letter-strip" id="letterStrip"></div></div>
+
   <div class="info-bar">
     <div class="ib-char" id="ibChar">ཀ</div>
-    <div class="ib-meta"><h2 id="ibName">Ka</h2><p id="ibDesc">1st consonant</p></div>
+    <div class="ib-meta">
+      <h2 id="ibName">Ka</h2>
+      <p  id="ibDesc">1st consonant</p>
+    </div>
     <div class="ib-right">
-      <div class="stroke-chip" id="strokeChip">Stroke 1 of 1</div>
+      <div class="stroke-pill" id="strokePill">Stroke 1 of 1</div>
       <div class="stroke-dots" id="strokeDots"></div>
     </div>
   </div>
+
   <div class="canvas-wrap" id="canvasWrap">
-    <canvas id="bgCanvas"></canvas>
-    <canvas id="trCanvas"></canvas>
-    <canvas id="guCanvas"></canvas>
+    <!-- layer order: bg → done strokes → live stroke → guide/pointer (top) -->
+    <canvas id="cBg"></canvas>
+    <canvas id="cDone"></canvas>
+    <canvas id="cLive"></canvas>
+    <canvas id="cGuide"></canvas>
   </div>
-  <div class="hint" id="hint">Follow the numbered waypoints — trace along the letter path</div>
+
+  <div class="hint" id="hint">Follow the numbered waypoints</div>
+
   <div class="controls">
-    <button class="btn-c"      id="btnPrev"  onclick="prevLetter()">← Prev</button>
-    <button class="btn-c"      id="btnReset" onclick="resetLetter()">↺ Retry</button>
-    <button class="btn-c dark" id="btnNext"  onclick="nextLetter()">Next →</button>
+    <button class="btn-c"     id="btnPrev"  onclick="prevLetter()">← Prev</button>
+    <button class="btn-c"     id="btnRetry" onclick="retryLetter()">↺ Retry</button>
+    <button class="btn-c ink" id="btnNext"  onclick="nextLetter()">Next →</button>
   </div>
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════════
-   CONFIGURATION CONSTANTS
-═══════════════════════════════════════════════════════ */
-const CONFIG = {
-  TOLERANCE_RATIO: 0.08,           // 8% of canvas size for tracing tolerance
-  GUIDE_DOT_SPACING: 0.05,         // Spacing for dotted guide line (normalized)
-  KEY_POINT_ANGLE_THRESHOLD: Math.PI / 5,  // 36 degrees for corner detection
-  PROGRESS_GRANULARITY: 2,          // Pixels per progress step
+/* ══════════════════════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════════════════════ */
+const CFG = {
+  SNAP_RATIO:        0.09,          // fraction of CS — max distance to count as on-path
+  COMPLETION_THRESH: 0.96,          // fraction of arc needed to complete stroke
+  STROKE_WIDTH:      0.022,         // fraction of CS
+  GUIDE_DASH:        [5, 9],
+  GUIDE_WIDTH:       0.014,
+  DOT_RADIUS:        0.023,
+  CURSOR_RADIUS:     0.014,
+  ANGLE_THRESH:      Math.PI / 4,   // ~45° — corner detection
+  MIN_WP_FRAC:       0.12,          // min spacing between waypoints as fraction of total arc
 };
 
-/* ═══════════════════════════════════════════════════════
-   GEOMETRY UTILITIES
-═══════════════════════════════════════════════════════ */
-
-/**
- * Calculate Euclidean distance between two points
- */
-function distance(p1, p2) {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  return Math.sqrt(dx * dx + dy * dy);
+/* ══════════════════════════════════════════════════════════
+   GEOMETRY
+══════════════════════════════════════════════════════════ */
+function ptDist(a, b) {
+  return Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
 }
 
-/**
- * Calculate distance from point p to line segment vw
- */
-function distanceToSegment(p, v, w) {
-  const l2 = (w.x - v.x) ** 2 + (w.y - v.y) ** 2;
-  if (l2 === 0) return distance(p, v);
-
-  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
-  t = Math.max(0, Math.min(1, t));
-
-  const projection = {
-    x: v.x + t * (w.x - v.x),
-    y: v.y + t * (w.y - v.y)
-  };
-
-  return distance(p, projection);
+function arcLength(poly) {
+  let d = 0;
+  for (let i = 1; i < poly.length; i++) d += ptDist(poly[i-1], poly[i]);
+  return d;
 }
 
-/**
- * Calculate angle between three points (p0-p1-p2)
- * Returns the interior angle in radians
- */
-function calculateAngle(p0, p1, p2) {
-  const v1 = { x: p0.x - p1.x, y: p0.y - p1.y };
-  const v2 = { x: p2.x - p1.x, y: p2.y - p1.y };
-
-  const dot = v1.x * v2.x + v1.y * v2.y;
-  const cross = v1.x * v2.y - v1.y * v2.x;
-
-  return Math.atan2(Math.abs(cross), dot);
+function arcLengthUpTo(poly, idx) {
+  let d = 0;
+  for (let i = 1; i <= idx && i < poly.length; i++) d += ptDist(poly[i-1], poly[i]);
+  return d;
 }
 
-/**
- * Find the closest point on a polyline to a given point
- * Returns the point and the index of the segment
- */
-function findClosestPointOnPath(points, userPoint) {
-  let minDist = Infinity;
-  let closestPoint = points[0];
-  let closestIndex = 0;
-
-  for (let i = 0; i < points.length - 1; i++) {
-    const p = points[i];
-    const p2 = points[i + 1];
-
-    // Find closest point on this segment
-    const l2 = (p2.x - p.x) ** 2 + (p2.y - p.y) ** 2;
-    if (l2 === 0) {
-      const d = distance(userPoint, p);
-      if (d < minDist) {
-        minDist = d;
-        closestPoint = p;
-        closestIndex = i;
-      }
-      continue;
-    }
-
-    let t = ((userPoint.x - p.x) * (p2.x - p.x) + (userPoint.y - p.y) * (p2.y - p.y)) / l2;
-    t = Math.max(0, Math.min(1, t));
-
-    const proj = {
-      x: p.x + t * (p2.x - p.x),
-      y: p.y + t * (p2.y - p.y)
-    };
-
-    const d = distance(userPoint, proj);
-    if (d < minDist) {
-      minDist = d;
-      closestPoint = proj;
-      closestIndex = i;
-    }
-  }
-
-  // Check last point
-  const lastPoint = points[points.length - 1];
-  const d = distance(userPoint, lastPoint);
-  if (d < minDist) {
-    minDist = d;
-    closestPoint = lastPoint;
-    closestIndex = points.length - 1;
-  }
-
-  return { point: closestPoint, index: closestIndex, distance: minDist };
-}
-
-/**
- * Get cumulative distance at a point index along a stroke
- */
-function getDistanceAtPoint(points, index) {
-  let dist = 0;
-  for (let i = 1; i <= index && i < points.length; i++) {
-    dist += distance(points[i - 1], points[i]);
-  }
-  return dist;
-}
-
-/**
- * Get total length of a stroke
- */
-function getStrokeLength(points) {
-  return getDistanceAtPoint(points, points.length - 1);
-}
-
-/**
- * Extract key points from a stroke path
- * Detects start, end, and direction change points (corners/curves)
- */
-function extractKeyPoints(points) {
-  if (points.length <= 2) {
-    return points.map((p, i) => ({ point: p, index: i, type: i === 0 ? 'start' : 'end' }));
-  }
-
-  const keyPoints = [{ point: points[0], index: 0, type: 'start' }];
-
-  // Look for direction changes
-  for (let i = 2; i < points.length - 2; i++) {
-    const angle = calculateAngle(points[i - 1], points[i], points[i + 1]);
-
-    if (angle > CONFIG.KEY_POINT_ANGLE_THRESHOLD) {
-      // This is a corner or sharp curve
-      keyPoints.push({ point: points[i], index: i, type: 'corner' });
-    }
-  }
-
-  keyPoints.push({ point: points[points.length - 1], index: points.length - 1, type: 'end' });
-
-  return keyPoints;
-}
-
-/**
- * Generate evenly spaced waypoints along a stroke for smooth progress tracking
- */
-function generateWaypoints(points, spacing) {
-  if (points.length < 2) return points;
-
-  const waypoints = [points[0]];
-  let accumulatedDist = 0;
-  let targetDist = spacing;
-
-  for (let i = 1; i < points.length; i++) {
-    const segLen = distance(points[i - 1], points[i]);
-
-    while (accumulatedDist + segLen >= targetDist && i < points.length) {
-      const t = (targetDist - accumulatedDist) / segLen;
-      const interp = {
-        x: points[i - 1].x + t * (points[i].x - points[i - 1].x),
-        y: points[i - 1].y + t * (points[i].y - points[i - 1].y)
-      };
-      waypoints.push(interp);
-      targetDist += spacing;
-    }
-
-    accumulatedDist += segLen;
-  }
-
-  // Always include the last point
-  waypoints.push(points[points.length - 1]);
-
-  return waypoints;
-}
-
-/* ═══════════════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════════════ */
-let letters=[],lIdx=0,sIdx=0,done={},isDown=false;
-
-// Tracking state
-let currentProgress = 0;      // Current distance along stroke (in pixels)
-let strokeTotalLength = 0;    // Total length of current stroke
-let tolerance = 0;            // Current tolerance in pixels
-let isOffPath = false;        // User is outside tolerance
-
-// Normalized stroke data (0-1 coordinates)
-let normStrokes = [];
-
-// Canvas state
-const bgC=document.getElementById('bgCanvas');
-const trC=document.getElementById('trCanvas');
-const guC=document.getElementById('guCanvas');
-const wrap=document.getElementById('canvasWrap');
-let bgX,trX,guX,CS,DPR;
-
-/*
-  ═══════════════════════════════════════════════════════
-  CORE APPROACH — "FOG OF WAR" REVEAL
-  ═══════════════════════════════════════════════════════
-*/
-let letterInkCanvas=null, letterDoneCanvas=null;
-let revealCanvas=null, rvX=null;
-
-/* ═══════════════════════════════════════════════════════
-   JSON LOAD
-═══════════════════════════════════════════════════════ */
-function loadJSON(){
-  const raw=document.getElementById('jsonInput').value.trim();
-  const errEl=document.getElementById('pasteError');
-  errEl.style.display='none';
-  if(!raw){showErr('Please paste your JSON.');return;}
-  let parsed;
-  try{parsed=JSON.parse(raw);}catch(e){showErr('Invalid JSON.');return;}
-  letters=[];
-
-  // Handle new v1.0 format
-  if (parsed.version === "1.0" && parsed.coordinateSystem === "normalized-0-1") {
-    Object.entries(parsed.letters || {}).forEach(([char, data]) => {
-      letters.push({
-        char: char,
-        name: data.name || char,
-        desc: '',
-        index: data.index || 0,
-        strokes: data.strokes || []
+// Sub-polyline from start up to targetArc distance
+function subPolyUpToArc(poly, targetArc) {
+  if (targetArc <= 0) return [poly[0]];
+  const out = [poly[0]];
+  let acc = 0;
+  for (let i = 1; i < poly.length; i++) {
+    const seg = ptDist(poly[i-1], poly[i]);
+    if (acc + seg >= targetArc) {
+      const t = (targetArc - acc) / seg;
+      out.push({
+        x: poly[i-1].x + t * (poly[i].x - poly[i-1].x),
+        y: poly[i-1].y + t * (poly[i].y - poly[i-1].y),
       });
+      return out;
+    }
+    out.push(poly[i]);
+    acc += seg;
+  }
+  return out;
+}
+
+// Point exactly at arc distance
+function pointAtArc(poly, target) {
+  let acc = 0;
+  for (let i = 1; i < poly.length; i++) {
+    const seg = ptDist(poly[i-1], poly[i]);
+    if (acc + seg >= target) {
+      const t = (target - acc) / seg;
+      return { x: poly[i-1].x + t * (poly[i].x - poly[i-1].x),
+               y: poly[i-1].y + t * (poly[i].y - poly[i-1].y) };
+    }
+    acc += seg;
+  }
+  return poly[poly.length - 1];
+}
+
+// Closest projected point on polyline to p
+function closestOnPoly(poly, p) {
+  let best = { dist: Infinity, arc: 0, pt: poly[0] };
+  let arcAcc = 0;
+  for (let i = 0; i < poly.length - 1; i++) {
+    const A = poly[i], B = poly[i+1];
+    const dx = B.x - A.x, dy = B.y - A.y;
+    const len2 = dx*dx + dy*dy;
+    let t = 0;
+    if (len2 > 0) t = Math.max(0, Math.min(1, ((p.x-A.x)*dx + (p.y-A.y)*dy) / len2));
+    const proj = { x: A.x + t*dx, y: A.y + t*dy };
+    const d = ptDist(p, proj);
+    if (d < best.dist) best = { dist: d, arc: arcAcc + t * Math.sqrt(len2), pt: proj };
+    arcAcc += Math.sqrt(len2);
+  }
+  // Check last point too
+  const dLast = ptDist(p, poly[poly.length-1]);
+  if (dLast < best.dist) best = { dist: dLast, arc: arcAcc, pt: poly[poly.length-1] };
+  return best;
+}
+
+// Pick meaningful waypoints: start + corners + end, spaced at least MIN_WP_FRAC apart
+function buildWaypoints(poly) {
+  const total  = arcLength(poly);
+  const minGap = total * CFG.MIN_WP_FRAC;
+  const result = [{ idx: 0, arc: 0 }];
+  let lastArc  = 0, acc = 0;
+
+  for (let i = 1; i < poly.length - 1; i++) {
+    acc += ptDist(poly[i-1], poly[i]);
+    if (acc - lastArc < minGap) continue;
+    // Corner detection
+    const prev = poly[i-1], cur = poly[i], next = poly[i+1];
+    const v1 = { x: prev.x - cur.x, y: prev.y - cur.y };
+    const v2 = { x: next.x - cur.x, y: next.y - cur.y };
+    const cross = Math.abs(v1.x * v2.y - v1.y * v2.x);
+    const dot   = v1.x * v2.x + v1.y * v2.y;
+    const angle = Math.atan2(cross, dot);
+    if (angle > CFG.ANGLE_THRESH) {
+      result.push({ idx: i, arc: acc });
+      lastArc = acc;
+    }
+  }
+  result.push({ idx: poly.length - 1, arc: total });
+  return result;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CANVAS SETUP
+══════════════════════════════════════════════════════════ */
+const wrapEl = document.getElementById('canvasWrap');
+const cBg    = document.getElementById('cBg');
+const cDone  = document.getElementById('cDone');
+const cLive  = document.getElementById('cLive');
+const cGuide = document.getElementById('cGuide');
+let xBg, xDone, xLive, xGuide, CS, DPR;
+
+function setupCanvases() {
+  DPR = window.devicePixelRatio || 1;
+  CS  = wrapEl.getBoundingClientRect().width;
+  [cBg, cDone, cLive, cGuide].forEach(c => {
+    c.width  = Math.round(CS * DPR);
+    c.height = Math.round(CS * DPR);
+    c.style.width  = CS + 'px';
+    c.style.height = CS + 'px';
+  });
+  xBg    = cBg.getContext('2d');    xBg.scale(DPR, DPR);
+  xDone  = cDone.getContext('2d');  xDone.scale(DPR, DPR);
+  xLive  = cLive.getContext('2d');  xLive.scale(DPR, DPR);
+  xGuide = cGuide.getContext('2d'); xGuide.scale(DPR, DPR);
+}
+
+function getPointerPos(e) {
+  const r   = wrapEl.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return {
+    x: (src.clientX - r.left) * (CS / r.width),
+    y: (src.clientY - r.top)  * (CS / r.height),
+  };
+}
+
+/* ══════════════════════════════════════════════════════════
+   DRAW HELPERS
+══════════════════════════════════════════════════════════ */
+// Smooth bezier through points
+function drawSmoothPath(ctx, pts) {
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  if (pts.length === 2) {
+    ctx.lineTo(pts[1].x, pts[1].y);
+  } else {
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i].x + pts[i+1].x) / 2;
+      const my = (pts[i].y + pts[i+1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+    }
+    ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER LAYERS
+══════════════════════════════════════════════════════════ */
+function renderBg(char) {
+  xBg.clearRect(0, 0, CS, CS);
+  // Grid lines
+  xBg.strokeStyle = '#E9ECF6'; xBg.lineWidth = 1; xBg.setLineDash([3,6]);
+  [CS/3, CS*2/3].forEach(v => {
+    xBg.beginPath(); xBg.moveTo(v, 0); xBg.lineTo(v, CS); xBg.stroke();
+    xBg.beginPath(); xBg.moveTo(0, v); xBg.lineTo(CS, v); xBg.stroke();
+  });
+  xBg.setLineDash([]);
+  xBg.strokeStyle = '#D1D8EE'; xBg.lineWidth = 1;
+  xBg.beginPath(); xBg.moveTo(CS/2, 0); xBg.lineTo(CS/2, CS); xBg.stroke();
+  xBg.beginPath(); xBg.moveTo(0, CS/2); xBg.lineTo(CS, CS/2); xBg.stroke();
+  // Ghost glyph
+  const fs = Math.round(CS * 0.60);
+  xBg.font = `700 ${fs}px "Noto Serif Tibetan", serif`;
+  xBg.textAlign = 'center'; xBg.textBaseline = 'alphabetic';
+  const m  = xBg.measureText(char);
+  const th = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  xBg.fillStyle = 'rgba(59,92,229,0.07)';
+  xBg.fillText(char, CS/2, CS/2 + m.actualBoundingBoxAscent - th/2);
+}
+
+// Render all fully-completed strokes in green
+function renderDone() {
+  xDone.clearRect(0, 0, CS, CS);
+  const sw = CS * CFG.STROKE_WIDTH;
+  completedStrokes.forEach(poly => {
+    xDone.save();
+    xDone.strokeStyle = '#15803D';
+    xDone.lineWidth   = sw;
+    xDone.lineCap     = 'round';
+    xDone.lineJoin    = 'round';
+    drawSmoothPath(xDone, poly);
+    xDone.stroke();
+    // Round cap at start
+    xDone.beginPath();
+    xDone.arc(poly[0].x, poly[0].y, sw/2, 0, Math.PI*2);
+    xDone.fillStyle = '#15803D';
+    xDone.fill();
+    xDone.restore();
+  });
+}
+
+// Render the live in-progress stroke (dark ink, grows from start)
+function renderLive() {
+  xLive.clearRect(0, 0, CS, CS);
+  if (!activePoly || currentArc <= 0) return;
+  const sub = subPolyUpToArc(activePoly, currentArc);
+  if (sub.length < 2) return;
+  const sw = CS * CFG.STROKE_WIDTH;
+  xLive.save();
+  xLive.strokeStyle = '#0F172A';
+  xLive.lineWidth   = sw;
+  xLive.lineCap     = 'round';
+  xLive.lineJoin    = 'round';
+  drawSmoothPath(xLive, sub);
+  xLive.stroke();
+  xLive.beginPath();
+  xLive.arc(sub[0].x, sub[0].y, sw/2, 0, Math.PI*2);
+  xLive.fillStyle = '#0F172A';
+  xLive.fill();
+  xLive.restore();
+}
+
+// Render guide overlay: dotted path + numbered waypoints + moving cursor
+function renderGuide() {
+  xGuide.clearRect(0, 0, CS, CS);
+  if (letterDone || !activePoly) return;
+
+  const poly  = activePoly;
+  const total = totalArc;
+  const dR    = CS * CFG.DOT_RADIUS;
+  const cR    = CS * CFG.CURSOR_RADIUS;
+  const gw    = CS * CFG.GUIDE_WIDTH;
+  const fSz   = Math.max(9, dR * 0.88);
+
+  // Dotted guide path — full stroke (always visible as reference)
+  xGuide.save();
+  xGuide.setLineDash(CFG.GUIDE_DASH);
+  xGuide.strokeStyle = 'rgba(37,99,235,0.20)';
+  xGuide.lineWidth   = gw;
+  xGuide.lineCap     = 'round';
+  xGuide.lineJoin    = 'round';
+  drawSmoothPath(xGuide, poly);
+  xGuide.stroke();
+  xGuide.restore();
+
+  // Waypoints
+  waypoints.forEach((wp, n) => {
+    const p       = poly[Math.min(wp.idx, poly.length-1)];
+    const reached = wp.arc <= currentArc + 2;  // +2px tolerance
+    const isNext  = !reached && (n === 0 || waypoints[n-1].arc <= currentArc + 2);
+
+    // Glow ring for next target
+    if (isNext) {
+      xGuide.beginPath();
+      xGuide.arc(p.x, p.y, dR + 6, 0, Math.PI*2);
+      xGuide.fillStyle = 'rgba(37,99,235,0.12)';
+      xGuide.fill();
+    }
+    // Dot fill
+    xGuide.beginPath();
+    xGuide.arc(p.x, p.y, dR, 0, Math.PI*2);
+    xGuide.fillStyle = reached
+      ? '#15803D'
+      : isNext
+        ? '#2563EB'
+        : 'rgba(37,99,235,0.35)';
+    xGuide.fill();
+    // White ring
+    xGuide.strokeStyle = 'rgba(255,255,255,0.9)';
+    xGuide.lineWidth   = 1.8;
+    xGuide.stroke();
+    // Number label
+    xGuide.save();
+    xGuide.font         = `700 ${fSz}px "DM Sans", sans-serif`;
+    xGuide.textAlign    = 'center';
+    xGuide.textBaseline = 'middle';
+    xGuide.fillStyle    = '#fff';
+    xGuide.fillText(String(n+1), p.x, p.y + 0.5);
+    xGuide.restore();
+  });
+
+  // Moving cursor at leading edge of traced arc
+  if (currentArc < total) {
+    const tip   = pointAtArc(poly, currentArc);
+    const color = isOffPath ? '#DC2626' : '#2563EB';
+    // Outer ring
+    xGuide.beginPath();
+    xGuide.arc(tip.x, tip.y, cR + 3.5, 0, Math.PI*2);
+    xGuide.fillStyle = isOffPath ? 'rgba(220,38,38,0.14)' : 'rgba(37,99,235,0.13)';
+    xGuide.fill();
+    // Inner dot
+    xGuide.beginPath();
+    xGuide.arc(tip.x, tip.y, cR, 0, Math.PI*2);
+    xGuide.fillStyle   = color;
+    xGuide.fill();
+    xGuide.strokeStyle = 'rgba(255,255,255,0.9)';
+    xGuide.lineWidth   = 1.5;
+    xGuide.stroke();
+  }
+
+  // Progress bar at bottom
+  const bW   = CS * 0.55, bH = 3.5;
+  const bX   = (CS - bW) / 2, bY = CS - 14;
+  const prog = total > 0 ? Math.min(currentArc / total, 1) : 0;
+  xGuide.fillStyle = 'rgba(0,0,0,0.07)';
+  xGuide.beginPath(); xGuide.roundRect(bX, bY, bW, bH, 2); xGuide.fill();
+  xGuide.fillStyle = isOffPath ? '#DC2626' : '#2563EB';
+  xGuide.beginPath(); xGuide.roundRect(bX, bY, bW * prog, bH, 2); xGuide.fill();
+}
+
+/* ══════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════ */
+let letters          = [];
+let lIdx             = 0;
+let sIdx             = 0;
+let completedStrokes = [];   // scaled polys of finished strokes this letter
+let activePoly       = null; // current stroke poly (scaled to CS)
+let waypoints        = [];   // [{idx, arc}]
+let currentArc       = 0;
+let totalArc         = 0;
+let isOffPath        = false;
+let isDown           = false;
+let letterDone       = false;
+const doneLetter     = {};
+
+/* ══════════════════════════════════════════════════════════
+   JSON LOADING
+══════════════════════════════════════════════════════════ */
+function extractStrokes(letterData) {
+  const raw = letterData.strokes;
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  return raw.map(stroke => {
+    const pts = Array.isArray(stroke) ? stroke : (stroke.points || []);
+    return pts.filter(p => typeof p.x === 'number' && typeof p.y === 'number');
+  }).filter(pts => pts.length >= 2);
+}
+
+function loadJSON() {
+  const raw   = document.getElementById('jsonInput').value.trim();
+  const errEl = document.getElementById('pasteError');
+  errEl.style.display = 'none';
+  if (!raw) { showErr('Please paste your JSON data.'); return; }
+
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch(e) { showErr('Invalid JSON — check for syntax errors.'); return; }
+
+  letters = [];
+
+  // v1.0 / v2.0 — both use parsed.letters
+  if (parsed.letters && typeof parsed.letters === 'object') {
+    Object.entries(parsed.letters).forEach(([char, data]) => {
+      const strokes = extractStrokes(data);
+      if (strokes.length)
+        letters.push({ char, name: data.name || char, desc: data.desc || '', index: data.index || 0, strokes });
     });
   }
-  // Handle old format
-  else if(Array.isArray(parsed)){
-    letters=parsed.filter(l=>l.char&&l.strokes&&l.strokes.length);
-  }else if(typeof parsed==='object'){
-    Object.entries(parsed).forEach(([char,v])=>{
-      if(v&&v.strokes&&v.strokes.length)
-        letters.push({char,name:v.name||char,desc:'',index:v.index||0,strokes:v.strokes});
+  // Legacy array
+  else if (Array.isArray(parsed)) {
+    parsed.forEach((l, i) => {
+      if (!l.char) return;
+      const strokes = extractStrokes(l);
+      if (strokes.length)
+        letters.push({ char: l.char, name: l.name || l.char, desc: '', index: l.index || i, strokes });
+    });
+  }
+  // Legacy flat object
+  else {
+    Object.entries(parsed).forEach(([char, v], i) => {
+      if (!v || !v.strokes) return;
+      const strokes = extractStrokes(v);
+      if (strokes.length)
+        letters.push({ char, name: v.name || char, desc: '', index: v.index || i, strokes });
     });
   }
 
-  letters.sort((a,b)=>a.index-b.index);
-
-  if(!letters.length){showErr('No valid letters found.');return;}
-  done={};lIdx=0;showTrace();
-}
-
-function showErr(m){const el=document.getElementById('pasteError');el.textContent=m;el.style.display='block';}
-function showPaste(){document.getElementById('screenPaste').style.display='flex';document.getElementById('screenTrace').style.display='none';}
-function showTrace(){document.getElementById('screenPaste').style.display='none';document.getElementById('screenTrace').style.display='flex';buildStrip();loadLetter(0);}
-
-/* ╀─ CANVAS SETUP ────────────────────────────────────── */
-function setupCanvas(){
-  DPR=window.devicePixelRatio||1;
-  const r=wrap.getBoundingClientRect();
-  CS=r.width;
-  [bgC,trC,guC].forEach(c=>{
-    c.width=Math.round(CS*DPR);c.height=Math.round(CS*DPR);
-    c.style.width=CS+'px';c.style.height=CS+'px';
-  });
-  bgX=bgC.getContext('2d');bgX.scale(DPR,DPR);
-  trX=trC.getContext('2d');trX.scale(DPR,DPR);
-  guX=guC.getContext('2d');guX.scale(DPR,DPR);
-}
-
-/* ── GLYPH RENDERER ──────────────────────────────────── */
-function renderGlyph(ctx,char,color){
-  const fs=Math.round(CS*0.60);
-  ctx.font=`700 ${fs}px "Noto Serif Tibetan",serif`;
-  ctx.textAlign='center';ctx.textBaseline='alphabetic';
-  const m=ctx.measureText(char);
-  const th=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
-  const y=CS/2+m.actualBoundingBoxAscent-th/2;
-  ctx.fillStyle=color;
-  ctx.fillText(char,CS/2,y);
-}
-
-/* ── BUILD LETTER CANVASES ───────────────────────────── */
-function buildLetterCanvases(char){
-  [[INK_C, c=>{letterInkCanvas=c;}],[DONE_C, c=>{letterDoneCanvas=c;}]].forEach(([color,assign])=>{
-    const c=document.createElement('canvas');
-    c.width=Math.round(CS*DPR);c.height=Math.round(CS*DPR);
-    const x=c.getContext('2d');x.scale(DPR,DPR);
-    renderGlyph(x,char,color);
-    assign(c);
-  });
-}
-
-/* ── REVEAL CANVAS ───────────────────────────────────── */
-function initRevealCanvas(){
-  revealCanvas=document.createElement('canvas');
-  revealCanvas.width=Math.round(CS*DPR);
-  revealCanvas.height=Math.round(CS*DPR);
-  rvX=revealCanvas.getContext('2d');
-  rvX.scale(DPR,DPR);
-}
-
-const BR=()=>CS*0.10;
-
-/**
- * Paint from progress distance along a stroke path
- */
-function paintRevealFromProgress(strokePoints, fromDist, toDist) {
-  if (toDist <= fromDist) return;
-
-  const r = BR();
-  rvX.save();
-  rvX.strokeStyle = '#000';
-  rvX.fillStyle = '#000';
-  rvX.lineWidth = r * 2;
-  rvX.lineCap = 'round';
-  rvX.lineJoin = 'round';
-
-  let accumulatedDist = 0;
-  let started = false;
-
-  for (let i = 1; i < strokePoints.length; i++) {
-    const segLen = distance(strokePoints[i - 1], strokePoints[i]);
-
-    if (!started && accumulatedDist + segLen > fromDist) {
-      // Start painting within this segment
-      started = true;
-      rvX.beginPath();
-      const t = (fromDist - accumulatedDist) / segLen;
-      const startX = strokePoints[i - 1].x + t * (strokePoints[i].x - strokePoints[i - 1].x);
-      const startY = strokePoints[i - 1].y + t * (strokePoints[i].y - strokePoints[i - 1].y);
-      rvX.moveTo(startX, startY);
-    }
-
-    if (started) {
-      if (accumulatedDist + segLen >= toDist) {
-        // End painting within this segment
-        const t = (toDist - accumulatedDist) / segLen;
-        const endX = strokePoints[i - 1].x + t * (strokePoints[i].x - strokePoints[i - 1].x);
-        const endY = strokePoints[i - 1].y + t * (strokePoints[i].y - strokePoints[i - 1].y);
-        rvX.lineTo(endX, endY);
-        rvX.stroke();
-        break;
-      } else {
-        rvX.lineTo(strokePoints[i].x, strokePoints[i].y);
-      }
-    }
-
-    accumulatedDist += segLen;
-  }
-
-  rvX.stroke();
-
-  // Circle cap at current position
-  if (started) {
-    const currentPoint = getPointAtDistance(strokePoints, toDist);
-    if (currentPoint) {
-      rvX.beginPath();
-      rvX.arc(currentPoint.x, currentPoint.y, r, 0, Math.PI * 2);
-      rvX.fill();
-    }
-  }
-
-  rvX.restore();
-}
-
-/**
- * Get point at a specific distance along a stroke
- */
-function getPointAtDistance(points, targetDist) {
-  let accumulatedDist = 0;
-
-  for (let i = 1; i < points.length; i++) {
-    const segLen = distance(points[i - 1], points[i]);
-
-    if (accumulatedDist + segLen >= targetDist) {
-      const t = (targetDist - accumulatedDist) / segLen;
-      return {
-        x: points[i - 1].x + t * (points[i].x - points[i - 1].x),
-        y: points[i - 1].y + t * (points[i].y - points[i - 1].y)
-      };
-    }
-
-    accumulatedDist += segLen;
-  }
-
-  return points[points.length - 1];
-}
-
-function paintStrokeFull(strokePoints){
-  if (strokePoints.length < 2) return;
-  const r = BR();
-  rvX.save();
-  rvX.strokeStyle = '#000';
-  rvX.fillStyle = '#000';
-  rvX.lineWidth = r * 2;
-  rvX.lineCap = 'round';
-  rvX.lineJoin = 'round';
-  rvX.beginPath();
-  rvX.moveTo(strokePoints[0].x, strokePoints[0].y);
-  for (let i = 1; i < strokePoints.length; i++) {
-    rvX.lineTo(strokePoints[i].x, strokePoints[i].y);
-  }
-  rvX.stroke();
-  rvX.restore();
-}
-
-/* ── REDRAW TRACE ────────────────────────────────────── */
-function redrawTrace(){
-  trX.clearRect(0,0,CS,CS);
-  if(!letterInkCanvas||!revealCanvas)return;
-
-  if(done[lIdx]){
-    trX.save();trX.setTransform(1,0,0,1,0,0);
-    trX.drawImage(letterDoneCanvas,0,0);
-    trX.restore();
+  letters.sort((a, b) => a.index - b.index);
+  if (!letters.length) {
+    showErr('No valid letter data found. Export from the Stroke Recorder with at least one saved letter.');
     return;
   }
-
-  const tmp=document.createElement('canvas');
-  tmp.width=Math.round(CS*DPR);tmp.height=Math.round(CS*DPR);
-  const tx=tmp.getContext('2d');
-
-  tx.drawImage(letterInkCanvas,0,0);
-  tx.globalCompositeOperation='destination-in';
-  tx.drawImage(revealCanvas,0,0);
-
-  trX.save();trX.setTransform(1,0,0,1,0,0);
-  trX.drawImage(tmp,0,0);
-  trX.restore();
+  lIdx = 0;
+  showTrace();
 }
 
-/* ── DRAW BACKGROUND ─────────────────────────────────── */
-const INK_C='#1E293B', DONE_C='#15803D', GUIDE_C='#1D4ED8';
-
-function drawBg(char){
-  bgX.clearRect(0,0,CS,CS);
-  bgX.strokeStyle='#E9ECF6';bgX.lineWidth=1;bgX.setLineDash([3,6]);
-  [CS/3,CS*2/3].forEach(v=>{
-    bgX.beginPath();bgX.moveTo(v,0);bgX.lineTo(v,CS);bgX.stroke();
-    bgX.beginPath();bgX.moveTo(0,v);bgX.lineTo(CS,v);bgX.stroke();
-  });
-  bgX.setLineDash([]);
-  bgX.strokeStyle='#D8DCF0';bgX.lineWidth=1;
-  bgX.beginPath();bgX.moveTo(CS/2,0);bgX.lineTo(CS/2,CS);bgX.stroke();
-  bgX.beginPath();bgX.moveTo(0,CS/2);bgX.lineTo(CS,CS/2);bgX.stroke();
-
-  bgX.save();bgX.globalAlpha=0.08;
-  renderGlyph(bgX,char,INK_C);
-  bgX.restore();
+function showErr(msg) {
+  const el = document.getElementById('pasteError');
+  el.textContent = msg; el.style.display = 'block';
+}
+function showPaste() {
+  document.getElementById('screenPaste').style.display = 'flex';
+  document.getElementById('screenTrace').style.display = 'none';
+}
+function showTrace() {
+  document.getElementById('screenPaste').style.display = 'none';
+  document.getElementById('screenTrace').style.display = 'flex';
+  buildStrip();
+  loadLetter(0);
 }
 
-/* ── DRAW GUIDE ──────────────────────────────────────── */
-function drawGuide(){
-  guX.clearRect(0,0,CS,CS);
-  if(done[lIdx]||sIdx>=normStrokes.length)return;
-  const pts=normStrokes[sIdx];
-  if(pts.length<2)return;
-
-  // Convert normalized points to screen coordinates
-  const screenPts = pts.map(p => ({ x: p.x * CS, y: p.y * CS }));
-
-  // Extract key points for waypoint display
-  const keyPoints = extractKeyPoints(screenPts);
-
-  // ── Dotted path line ──
-  guX.save();
-  guX.setLineDash([4,6]);
-  guX.strokeStyle='rgba(29,78,216,0.2)';
-  guX.lineWidth=2.5;
-  guX.lineCap='round';
-  guX.lineJoin='round';
-  guX.beginPath();
-  guX.moveTo(screenPts[0].x, screenPts[0].y);
-  for(let i=1;i<screenPts.length-1;i++){
-    const mx=(screenPts[i].x+screenPts[i+1].x)/2;
-    const my=(screenPts[i].y+screenPts[i+1].y)/2;
-    guX.quadraticCurveTo(screenPts[i].x,screenPts[i].y,mx,my);
-  }
-  guX.lineTo(screenPts[screenPts.length-1].x,screenPts[screenPts.length-1].y);
-  guX.stroke();
-  guX.restore();
-
-  // ── Key point markers ──
-  const dotR = Math.max(8, CS * 0.02);
-  const fontSize = Math.max(9, CS * 0.025);
-
-  keyPoints.forEach((kp, n) => {
-    const p = kp.point;
-    const reached = getDistanceAtPoint(screenPts, kp.index) < currentProgress;
-
-    // Determine if this is the current target
-    const isCurrent = !reached && n === 0;
-    const nextUnreachedIndex = keyPoints.findIndex(kp => getDistanceAtPoint(screenPts, kp.index) >= currentProgress);
-    const isNextTarget = n === nextUnreachedIndex;
-
-    // Outer glow for current target
-    if (isNextTarget) {
-      guX.beginPath();
-      guX.arc(p.x, p.y, dotR + 5, 0, Math.PI * 2);
-      guX.fillStyle = 'rgba(29,78,216,0.15)';
-      guX.fill();
-    }
-
-    // Dot fill
-    guX.beginPath();
-    guX.arc(p.x, p.y, dotR, 0, Math.PI * 2);
-    if (reached) {
-      guX.fillStyle = 'rgba(21,128,61,0.85)';
-    } else if (isNextTarget) {
-      guX.fillStyle = GUIDE_C;
-    } else {
-      guX.fillStyle = 'rgba(29,78,216,0.4)';
-    }
-    guX.fill();
-
-    // White border
-    guX.beginPath();
-    guX.arc(p.x, p.y, dotR, 0, Math.PI * 2);
-    guX.strokeStyle = 'rgba(255,255,255,0.9)';
-    guX.lineWidth = 1.5;
-    guX.stroke();
-
-    // Number label
-    guX.save();
-    guX.font = `700 ${fontSize}px "DM Sans", sans-serif`;
-    guX.textAlign = 'center';
-    guX.textBaseline = 'middle';
-    guX.fillStyle = '#fff';
-    guX.fillText(String(n + 1), p.x, p.y + 0.5);
-    guX.restore();
-  });
-
-  // ── Current target position indicator ──
-  if (currentProgress < strokeTotalLength) {
-    const targetPoint = getPointAtDistance(screenPts, currentProgress);
-    if (targetPoint) {
-      guX.beginPath();
-      guX.arc(targetPoint.x, targetPoint.y, CS * 0.014, 0, Math.PI * 2);
-      guX.fillStyle = isOffPath ? '#DC2626' : GUIDE_C;
-      guX.fill();
-      guX.beginPath();
-      guX.arc(targetPoint.x, targetPoint.y, CS * 0.014, 0, Math.PI * 2);
-      guX.strokeStyle = 'rgba(255,255,255,0.8)';
-      guX.lineWidth = 2;
-      guX.stroke();
-    }
-  }
-
-  // ── Progress bar ──
-  const progressRatio = currentProgress / strokeTotalLength;
-  const barWidth = CS * 0.6;
-  const barHeight = 4;
-  const barX = (CS - barWidth) / 2;
-  const barY = CS - 20;
-
-  guX.fillStyle = 'rgba(0,0,0,0.1)';
-  guX.fillRect(barX, barY, barWidth, barHeight);
-
-  guX.fillStyle = isOffPath ? '#DC2626' : GUIDE_C;
-  guX.fillRect(barX, barY, barWidth * progressRatio, barHeight);
+/* ══════════════════════════════════════════════════════════
+   LETTER / STROKE LOADING
+══════════════════════════════════════════════════════════ */
+function scalePoly(normPts) {
+  return normPts.map(p => ({ x: p.x * CS, y: p.y * CS }));
 }
 
-/* ── LOAD LETTER ─────────────────────────────────────── */
-function loadLetter(idx){
-  lIdx=idx;
-  sIdx=0;
-  currentProgress=0;
-  isDown=false;
-  isOffPath=false;
-  const l=letters[idx];
-  setupCanvas();
-
-  // Store normalized strokes directly
-  normStrokes = l.strokes.map(s => s.points || []);
-
-  // Calculate initial stroke length
-  if (normStrokes.length > 0) {
-    const screenPts = normStrokes[0].map(p => ({ x: p.x * CS, y: p.y * CS }));
-    strokeTotalLength = getStrokeLength(screenPts);
-  } else {
-    strokeTotalLength = 0;
-  }
-
-  // Set tolerance
-  tolerance = CS * CONFIG.TOLERANCE_RATIO;
-
-  buildLetterCanvases(l.char);
-  initRevealCanvas();
-  drawBg(l.char);
-
-  if(done[lIdx]){
-    normStrokes.forEach(pts=>{
-      const screenPts=pts.map(p=>({x:p.x*CS,y:p.y*CS}));
-      paintStrokeFull(screenPts);
-    });
-  }
-
-  redrawTrace();
-  drawGuide();
-  updateInfoBar();
-  updateHint();
-  updateControls();
+function loadLetter(idx) {
+  lIdx             = idx;
+  letterDone       = false;
+  completedStrokes = [];
+  isDown           = false;
+  setupCanvases();
+  renderBg(letters[idx].char);
+  xDone.clearRect(0, 0, CS, CS);
+  loadStroke(0);
+  updateUI();
   updateStrip();
-
-  const btn=document.getElementById(`ls-${idx}`);
-  if(btn)btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  const btn = document.getElementById(`ls-${idx}`);
+  if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
 }
 
-/* ── POINTER ─────────────────────────────────────────── */
-function getPos(e){
-  const r=wrap.getBoundingClientRect(),src=e.touches?e.touches[0]:e;
-  return{x:(src.clientX-r.left)*(CS/r.width),y:(src.clientY-r.top)*(CS/r.height)};
+function loadStroke(si) {
+  sIdx       = si;
+  currentArc = 0;
+  isOffPath  = false;
+  isDown     = false;
+  activePoly = scalePoly(letters[lIdx].strokes[si]);
+  totalArc   = arcLength(activePoly);
+  waypoints  = buildWaypoints(activePoly);
+  xLive.clearRect(0, 0, CS, CS);
+  renderLive();
+  renderGuide();
+  updateUI();
 }
 
-function onMove(pos){
-  if(!isDown||done[lIdx]||sIdx>=normStrokes.length)return;
+/* ══════════════════════════════════════════════════════════
+   POINTER HANDLING
+══════════════════════════════════════════════════════════ */
+cGuide.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  cGuide.setPointerCapture(e.pointerId);
+  isDown = true;
+  handleMove(getPointerPos(e));
+});
+cGuide.addEventListener('pointermove', e => {
+  e.preventDefault();
+  if (isDown) handleMove(getPointerPos(e));
+});
+cGuide.addEventListener('pointerup',     () => { isDown = false; });
+cGuide.addEventListener('pointercancel', () => { isDown = false; });
 
-  const pts = normStrokes[sIdx];
-  const screenPts = pts.map(p => ({ x: p.x * CS, y: p.y * CS }));
+function handleMove(pos) {
+  if (letterDone || !activePoly) return;
+  const snapDist = CS * CFG.SNAP_RATIO;
+  const closest  = closestOnPoly(activePoly, pos);
+  isOffPath      = closest.dist > snapDist;
 
-  // Find closest point on stroke path
-  const closest = findClosestPointOnPath(screenPts, pos);
-  const distToPath = closest.distance;
-
-  // Check if within tolerance
-  isOffPath = distToPath > tolerance;
-
-  if (!isOffPath) {
-    // Calculate distance along the stroke to this point
-    const distAlong = getDistanceAtPoint(screenPts, closest.index) +
-                      distance(screenPts[closest.index], closest.point);
-
-    // Only advance if we're moving forward
-    if (distAlong > currentProgress) {
-      const prevProgress = currentProgress;
-      currentProgress = Math.min(distAlong, strokeTotalLength);
-
-      // Paint the new segment
-      paintRevealFromProgress(screenPts, prevProgress, currentProgress);
-      redrawTrace();
-      drawGuide();
-      updateInfoBar();
-
-      // Check if stroke complete
-      if (currentProgress >= strokeTotalLength * 0.98) {
-        sIdx++;
-        currentProgress = 0;
-
-        if (sIdx >= normStrokes.length) {
-          done[lIdx] = true;
-          normStrokes.forEach(p => {
-            const sp = p.map(pt => ({ x: pt.x * CS, y: pt.y * CS }));
-            paintStrokeFull(sp);
-          });
-          redrawTrace();
-          guX.clearRect(0, 0, CS, CS);
-          updateStrip();
-        } else {
-          // Set up next stroke
-          const nextScreenPts = normStrokes[sIdx].map(p => ({ x: p.x * CS, y: p.y * CS }));
-          strokeTotalLength = getStrokeLength(nextScreenPts);
-        }
-
-        drawGuide();
-        updateInfoBar();
-        updateHint();
-        updateControls();
-      }
+  if (!isOffPath && closest.arc > currentArc) {
+    currentArc = Math.min(closest.arc, totalArc);
+    renderLive();
+    renderGuide();
+    updateHintProgress();
+    if (currentArc >= totalArc * CFG.COMPLETION_THRESH) {
+      finishStroke();
     }
   } else {
-    // Off path - update guide to show error
-    drawGuide();
+    renderGuide();  // redraw for off-path cursor colour
+    if (isOffPath) updateHintOffPath();
   }
 }
 
-guC.addEventListener('pointerdown',e=>{
-  e.preventDefault();
-  guC.setPointerCapture(e.pointerId);
-  isDown=true;
-  onMove(getPos(e));
-});
-guC.addEventListener('pointermove',e=>{
-  e.preventDefault();
-  onMove(getPos(e));
-});
-guC.addEventListener('pointerup',()=>{isDown=false;});
-guC.addEventListener('pointercancel',()=>{isDown=false;});
+function finishStroke() {
+  // Snap to full length, render complete
+  currentArc = totalArc;
+  renderLive();
+  // Move to done layer
+  completedStrokes.push(activePoly);
+  renderDone();
+  xLive.clearRect(0, 0, CS, CS);
 
-/* ── NAV ─────────────────────────────────────────────── */
-function prevLetter(){if(lIdx>0)loadLetter(lIdx-1);}
-function nextLetter(){if(lIdx<letters.length-1)loadLetter(lIdx+1);}
-function resetLetter(){done[lIdx]=false;loadLetter(lIdx);}
+  const total = letters[lIdx].strokes.length;
+  if (sIdx + 1 < total) {
+    loadStroke(sIdx + 1);
+  } else {
+    letterDone       = true;
+    doneLetter[lIdx] = true;
+    activePoly       = null;
+    xGuide.clearRect(0, 0, CS, CS);
+    updateUI();
+    updateStrip();
+  }
+}
 
-/* ── UI ──────────────────────────────────────────────── */
-function buildStrip(){
-  const s=document.getElementById('letterStrip');s.innerHTML='';
-  letters.forEach((l,i)=>{
-    const b=document.createElement('button');
-    b.className='ls-btn';b.textContent=l.char;b.title=l.name;b.id=`ls-${i}`;
-    b.onclick=()=>loadLetter(i);s.appendChild(b);
+/* ══════════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════════ */
+function prevLetter()  { if (lIdx > 0)                  loadLetter(lIdx - 1); }
+function nextLetter()  { if (lIdx < letters.length - 1) loadLetter(lIdx + 1); }
+function retryLetter() { loadLetter(lIdx); }
+
+/* ══════════════════════════════════════════════════════════
+   UI
+══════════════════════════════════════════════════════════ */
+function buildStrip() {
+  const s = document.getElementById('letterStrip');
+  s.innerHTML = '';
+  letters.forEach((l, i) => {
+    const b = document.createElement('button');
+    b.className = 'ls-btn'; b.textContent = l.char; b.title = l.name; b.id = `ls-${i}`;
+    b.onclick = () => loadLetter(i);
+    s.appendChild(b);
   });
 }
 
-function updateStrip(){
-  letters.forEach((_,i)=>{
-    const b=document.getElementById(`ls-${i}`);if(!b)return;
-    b.className='ls-btn'+(i===lIdx?' active':'')+(done[i]?' done':'');
+function updateStrip() {
+  letters.forEach((_, i) => {
+    const b = document.getElementById(`ls-${i}`);
+    if (!b) return;
+    b.className = 'ls-btn'
+      + (i === lIdx    ? ' active' : '')
+      + (doneLetter[i] ? ' done'   : '');
   });
 }
 
-function updateInfoBar(){
-  const l=letters[lIdx],ns=normStrokes.length,si=Math.min(sIdx,ns-1),isDone=done[lIdx];
-  document.getElementById('ibChar').textContent=l.char;
-  document.getElementById('ibName').textContent=l.name;
-  document.getElementById('ibDesc').textContent=l.desc||('Consonant '+(lIdx+1));
-  const chip=document.getElementById('strokeChip');
-  chip.textContent=isDone?'Complete ✓':`Stroke ${si+1} of ${ns}`;
-  chip.className='stroke-chip'+(isDone?' done-chip':'');
-  const dots=document.getElementById('strokeDots');dots.innerHTML='';
-  for(let i=0;i<ns;i++){
-    const d=document.createElement('div');
-    d.className='sdot'+(isDone||i<sIdx?' complete':(i===sIdx?' active':''));
+function updateUI() {
+  const l  = letters[lIdx];
+  const ns = l.strokes.length;
+  document.getElementById('ibChar').textContent = l.char;
+  document.getElementById('ibName').textContent = l.name;
+  document.getElementById('ibDesc').textContent = l.desc || `Consonant ${lIdx + 1}`;
+
+  const pill = document.getElementById('strokePill');
+  if (letterDone) {
+    pill.textContent = '✓ Complete';
+    pill.className   = 'stroke-pill done';
+  } else {
+    pill.textContent = `Stroke ${sIdx + 1} of ${ns}`;
+    pill.className   = 'stroke-pill';
+  }
+
+  const dots = document.getElementById('strokeDots');
+  dots.innerHTML = '';
+  for (let i = 0; i < ns; i++) {
+    const d = document.createElement('div');
+    d.className = 'sdot '
+      + (letterDone || i < sIdx ? 'complete'
+       : i === sIdx             ? 'active'
+       :                          '');
     dots.appendChild(d);
   }
-}
 
-function updateHint(){
-  const el=document.getElementById('hint');
-  if(done[lIdx]){
-    el.textContent='✓ Letter complete! Tap "Next →" to continue.';
-    el.className='hint done';
-  } else if(isOffPath){
-    el.textContent='⚠️ Stay on the dotted path — you went off track!';
-    el.className='hint active';
-    el.style.color='#DC2626';
-    el.style.borderColor='#FECACA';
-    el.style.backgroundColor='#FEF2F2';
-  } else{
-    const progress = Math.round((currentProgress / strokeTotalLength) * 100);
-    el.textContent=`Trace stroke ${sIdx+1} of ${normStrokes.length} — follow the numbered waypoints (${progress}%)`;
-    el.className='hint active';
-    el.style.color='';
-    el.style.borderColor='';
-    el.style.backgroundColor='';
+  const h = document.getElementById('hint');
+  if (letterDone) {
+    h.textContent = lIdx < letters.length - 1
+      ? '✓ Letter complete! Press Next to continue.'
+      : '✓ All letters complete! Great job!';
+    h.className = 'hint done';
+  } else {
+    const pct = totalArc > 0 ? Math.round((currentArc / totalArc) * 100) : 0;
+    h.textContent = `Stroke ${sIdx+1} of ${ns} — trace the dotted path (${pct}%)`;
+    h.className   = 'hint active';
   }
+
+  document.getElementById('btnPrev').disabled = lIdx === 0;
+  document.getElementById('btnNext').disabled = lIdx === letters.length - 1;
+  const btnN = document.getElementById('btnNext');
+  btnN.className = (doneLetter[lIdx] && lIdx < letters.length - 1) ? 'btn-c ok' : 'btn-c ink';
 }
 
-function updateControls(){
-  document.getElementById('btnPrev').disabled=lIdx===0;
-  document.getElementById('btnNext').disabled=lIdx===letters.length-1;
-  const n=document.getElementById('btnNext');
-  n.className=done[lIdx]&&lIdx<letters.length-1?'btn-c success':'btn-c dark';
+function updateHintProgress() {
+  if (letterDone) return;
+  const h   = document.getElementById('hint');
+  const pct = totalArc > 0 ? Math.round((currentArc / totalArc) * 100) : 0;
+  h.textContent = `Stroke ${sIdx+1} of ${letters[lIdx].strokes.length} — trace the dotted path (${pct}%)`;
+  h.className   = 'hint active';
 }
 
+function updateHintOffPath() {
+  const h = document.getElementById('hint');
+  h.textContent = 'Off path — move back onto the dotted guide to continue';
+  h.className   = 'hint error';
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESIZE
+══════════════════════════════════════════════════════════ */
 let _rt;
-window.addEventListener('resize',()=>{
+window.addEventListener('resize', () => {
   clearTimeout(_rt);
-  _rt=setTimeout(()=>{if(letters.length)loadLetter(lIdx);},150);
+  _rt = setTimeout(() => {
+    if (!letters.length) return;
+    setupCanvases();
+    renderBg(letters[lIdx].char);
+    // Re-scale completed strokes
+    completedStrokes = letters[lIdx].strokes.slice(0, sIdx).map(s => scalePoly(s));
+    renderDone();
+    if (!letterDone && sIdx < letters[lIdx].strokes.length) {
+      activePoly = scalePoly(letters[lIdx].strokes[sIdx]);
+      totalArc   = arcLength(activePoly);
+      waypoints  = buildWaypoints(activePoly);
+      currentArc = 0;
+      xLive.clearRect(0, 0, CS, CS);
+    }
+    renderLive();
+    renderGuide();
+  }, 150);
 });
 </script>
 </body>

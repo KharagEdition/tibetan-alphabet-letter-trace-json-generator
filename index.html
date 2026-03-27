@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Tibetan Stroke Path Recorder</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&family=Noto+Serif+Tibetan:wght@400;700&display=swap" rel="stylesheet">
+<title>Tibetan Stroke Recorder</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@500&family=Noto+Serif+Tibetan:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:        #F4F6FB;
+  --bg:        #F3F5FA;
   --surface:   #FFFFFF;
-  --border:    #E2E7F3;
+  --border:    #E2E7F0;
   --text-1:    #111827;
   --text-2:    #4B5563;
   --text-3:    #9CA3AF;
-  --accent:    #4F6BF0;
+  --accent:    #3B5CE5;
   --accent-lt: #EEF1FE;
   --green:     #16A34A;
   --green-lt:  #DCFCE7;
@@ -21,31 +21,28 @@
   --amber-lt:  #FEF3C7;
   --red:       #DC2626;
   --red-lt:    #FEE2E2;
-  --radius:    16px;
-  --shadow:    0 4px 24px rgba(0,0,0,0.08);
-  --canvas-size: min(440px, calc(100vw - 48px));
+  --radius:    14px;
+  --shadow:    0 2px 16px rgba(0,0,0,0.06);
+  --canvas-size: min(440px, calc(100vw - 40px));
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html { scroll-behavior: smooth; }
 
 body {
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   min-height: 100vh;
   color: var(--text-1);
-  padding: 0 0 40px;
+  padding-bottom: 48px;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* ── Top bar ───────────────────────────────────────────── */
 .topbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 14px 20px;
+  padding: 13px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -54,495 +51,278 @@ body {
   z-index: 100;
   gap: 12px;
 }
-.topbar-title {
+.topbar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
 }
-.topbar-icon {
-  width: 36px; height: 36px;
+.topbar-logo {
+  width: 34px; height: 34px;
   background: var(--accent);
-  border-radius: 10px;
+  border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
   font-family: 'Noto Serif Tibetan', serif;
-  font-size: 1.1rem;
-  color: white;
-  flex-shrink: 0;
+  font-size: 1rem; color: #fff; flex-shrink: 0;
 }
 .topbar h1 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 0.9rem; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.topbar h1 span {
-  font-weight: 400;
-  color: var(--text-3);
-  font-size: 0.82rem;
+.topbar h1 small {
+  display: block; font-size: 0.72rem; font-weight: 400; color: var(--text-3);
 }
 .progress-pill {
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: var(--accent-lt);
-  color: var(--accent);
-  padding: 4px 12px;
-  border-radius: 99px;
-  white-space: nowrap;
-  flex-shrink: 0;
+  font-size: 0.75rem; font-weight: 600;
+  background: var(--accent-lt); color: var(--accent);
+  padding: 4px 12px; border-radius: 99px; white-space: nowrap; flex-shrink: 0;
 }
 
-/* ── Layout ───────────────────────────────────────────── */
 .layout {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 20px 16px 0;
-  max-width: 520px;
-  margin: 0 auto;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; padding: 18px 16px 0;
+  max-width: 520px; margin: 0 auto;
 }
 
-/* ── Letter Grid ──────────────────────────────────────── */
 .section-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  width: 100%;
-  padding: 0 2px;
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3);
+  width: 100%; padding: 0 2px;
 }
 
 .letter-grid {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  gap: 5px;
-  width: 100%;
+  gap: 5px; width: 100%;
 }
 @media (max-width: 400px) {
   .letter-grid { grid-template-columns: repeat(6, 1fr); }
 }
 
 .lgrid-btn {
-  aspect-ratio: 1;
-  border-radius: 9px;
+  aspect-ratio: 1; border-radius: 8px;
   border: 1.5px solid var(--border);
   background: var(--surface);
-  font-size: 1rem;
-  font-family: 'Noto Serif Tibetan', serif;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: border-color 0.12s, background 0.12s;
-  color: var(--text-2);
-  position: relative;
-  padding: 0;
+  font-size: 1rem; font-family: 'Noto Serif Tibetan', serif;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.1s, background 0.1s;
+  color: var(--text-2); position: relative; padding: 0;
 }
-.lgrid-btn:hover {
-  border-color: var(--accent);
-  background: var(--accent-lt);
-  z-index: 1;
-}
+.lgrid-btn:hover { border-color: var(--accent); background: var(--accent-lt); }
 .lgrid-btn.active {
-  border-color: var(--accent);
-  background: var(--accent-lt);
-  color: var(--accent);
-  font-weight: 700;
+  border-color: var(--accent); background: var(--accent-lt); color: var(--accent); font-weight: 700;
 }
 .lgrid-btn.saved {
-  border-color: var(--green);
-  background: var(--green-lt);
-  color: var(--green);
+  border-color: var(--green); background: var(--green-lt); color: var(--green);
 }
 .lgrid-btn.saved::after {
-  content: '✓';
-  position: absolute;
-  top: -4px; right: -4px;
-  background: var(--green);
-  color: white;
-  font-size: 8px;
-  width: 13px; height: 13px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 700;
+  content: '';
+  position: absolute; top: -3px; right: -3px;
+  width: 8px; height: 8px;
+  background: var(--green); border-radius: 50%;
+  border: 1.5px solid var(--bg);
 }
-.lgrid-btn.active.saved {
-  border-color: var(--amber);
-  background: var(--amber-lt);
-  color: var(--amber);
-}
+.lgrid-btn.active.saved { border-color: var(--amber); background: var(--amber-lt); color: var(--amber); }
 .lgrid-btn.active.saved::after { background: var(--amber); }
 
-/* ── Main Card ────────────────────────────────────────── */
 .card {
-  background: var(--surface);
-  border-radius: 20px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-  width: 100%;
-  overflow: hidden;
+  background: var(--surface); border-radius: 18px;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+  width: 100%; overflow: hidden;
 }
 
-/* ── Letter Header ────────────────────────────────────── */
 .letter-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
 }
 .letter-bigchar {
-  font-size: 2rem;
-  font-family: 'Noto Serif Tibetan', serif;
-  color: var(--text-1);
-  width: 56px; height: 56px;
-  background: var(--bg);
-  border-radius: 14px;
-  border: 1.5px solid var(--border);
+  font-size: 2rem; font-family: 'Noto Serif Tibetan', serif;
+  width: 52px; height: 52px; background: var(--bg);
+  border-radius: 12px; border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  line-height: 1;
+  flex-shrink: 0; line-height: 1;
 }
 .letter-info { flex: 1; min-width: 0; }
-.letter-info h2 { font-size: 1.1rem; font-weight: 700; color: var(--text-1); }
-.letter-info p  { font-size: 0.78rem; color: var(--text-3); font-weight: 500; margin-top: 1px; }
+.letter-info h2 { font-size: 1.05rem; font-weight: 700; }
+.letter-info p  { font-size: 0.76rem; color: var(--text-3); margin-top: 2px; }
 .strokes-badge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  background: var(--bg);
-  color: var(--text-2);
-  border: 1px solid var(--border);
-  padding: 4px 10px;
-  border-radius: 99px;
-  white-space: nowrap;
+  font-size: 0.72rem; font-weight: 600;
+  background: var(--bg); color: var(--text-2);
+  border: 1px solid var(--border); padding: 4px 10px; border-radius: 99px;
 }
 
-/* ── Canvas ───────────────────────────────────────────── */
 .canvas-wrapper {
   position: relative;
-  width: var(--canvas-size);
-  height: var(--canvas-size);
-  margin: 16px auto;
-  border-radius: 14px;
-  border: 1.5px solid var(--border);
-  background: #FAFBFF;
-  cursor: crosshair;
-  touch-action: none;
-  overflow: hidden;
-  display: block;
+  width: var(--canvas-size); height: var(--canvas-size);
+  margin: 14px auto;
+  border-radius: 12px; border: 1px solid var(--border);
+  background: #FAFBFF; cursor: crosshair;
+  touch-action: none; overflow: hidden;
 }
 .canvas-wrapper canvas {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
 }
 
-/* ── Stroke Info Bar ──────────────────────────────────── */
+.processing-info {
+  display: flex; gap: 6px; padding: 0 18px 10px; flex-wrap: wrap;
+}
+.p-stat {
+  font-size: 0.68rem; font-weight: 600;
+  padding: 3px 8px; border-radius: 5px;
+  background: var(--accent-lt); color: var(--accent);
+  border: 1px solid rgba(59,92,229,0.15);
+}
+.p-stat span { font-weight: 700; }
+
 .stroke-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 20px 12px;
+  display: flex; align-items: center; gap: 10px; padding: 0 18px 10px;
 }
 .stroke-chip {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 5px 14px;
-  border-radius: 99px;
-  color: white;
-  white-space: nowrap;
+  font-size: 0.72rem; font-weight: 700;
+  padding: 4px 12px; border-radius: 99px; color: white; white-space: nowrap;
 }
-.stroke-hint {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-2);
-}
+.stroke-hint { font-size: 0.78rem; color: var(--text-2); }
 
-/* ── Strokes List ─────────────────────────────────────── */
-.strokes-panel {
-  padding: 0 20px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
+.strokes-panel { padding: 0 18px 10px; display: flex; flex-direction: column; gap: 4px; }
 .stroke-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px 10px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-2);
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 9px; padding: 6px 10px;
+  font-size: 0.78rem; font-weight: 600; color: var(--text-2);
 }
-.stroke-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.stroke-pts { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-3); }
+.stroke-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.stroke-pts {
+  margin-left: auto; font-family: 'DM Mono', monospace;
+  font-size: 0.7rem; color: var(--text-3);
+}
 .stroke-del {
-  background: var(--red-lt);
-  border: none;
-  color: var(--red);
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.12s;
-  font-family: 'DM Sans', sans-serif;
+  background: var(--red-lt); border: none; color: var(--red);
+  border-radius: 5px; padding: 2px 7px; font-size: 0.7rem;
+  font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: background 0.1s;
 }
 .stroke-del:hover { background: #fca5a5; }
-
-/* ── Processing Info ──────────────────────────────────── */
-.processing-info {
-  display: flex;
-  gap: 8px;
-  padding: 0 20px 12px;
-  flex-wrap: wrap;
-}
-.processing-stat {
-  font-size: 0.7rem;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--accent-lt);
-  color: var(--accent);
-  border: 1px solid rgba(79,107,240,0.2);
-}
-.processing-stat span {
-  font-weight: 700;
+.empty-strokes {
+  font-size: 0.74rem; color: var(--text-3); text-align: center; padding: 4px 0;
 }
 
-/* ── Divider ──────────────────────────────────────────── */
-.divider { height: 1px; background: var(--border); margin: 0 20px; }
+.divider { height: 1px; background: var(--border); margin: 0 18px; }
 
-/* ── Action Buttons ───────────────────────────────────── */
 .btn-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 8px;
-  padding: 16px 20px;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 7px; padding: 14px 18px;
 }
-@media (max-width: 380px) {
-  .btn-grid { grid-template-columns: 1fr 1fr; }
+@media (max-width: 360px) {
+  .btn-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 .btn {
-  padding: 10px 8px;
-  border-radius: 11px;
-  border: none;
+  padding: 10px 6px; border-radius: 10px; border: none;
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  line-height: 1.2;
-  transition: background 0.12s;
+  font-size: 0.76rem; font-weight: 700; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  line-height: 1.2; transition: filter 0.1s;
 }
-.btn:hover { filter: brightness(0.95); }
-.btn .btn-icon { font-size: 1rem; }
+.btn:hover { filter: brightness(0.94); }
+.btn-sym { font-size: 0.9rem; line-height: 1; }
+.btn-undo   { background: var(--amber-lt); color: var(--amber); }
+.btn-clear  { background: var(--red-lt);   color: var(--red);   }
+.btn-stroke { background: var(--accent-lt);color: var(--accent); }
 
-.btn-undo   { background: var(--amber-lt);  color: var(--amber);  }
-.btn-clear  { background: var(--red-lt);    color: var(--red);    }
-.btn-stroke { background: var(--accent-lt); color: var(--accent); }
-.btn-save   { background: var(--green-lt);  color: var(--green);  }
-
-/* ── Save Full Width ──────────────────────────────────── */
-.save-row {
-  padding: 0 20px 20px;
-  display: flex;
-  gap: 8px;
-}
+.save-row { padding: 0 18px 18px; display: flex; gap: 7px; }
 .btn-save-full {
-  flex: 1;
-  padding: 13px;
-  border-radius: 13px;
-  border: none;
-  background: var(--green);
-  color: white;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
+  flex: 1; padding: 12px; border-radius: 12px; border: none;
+  background: var(--green); color: white;
+  font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
   transition: background 0.12s;
 }
 .btn-save-full:hover { background: #15803d; }
 .btn-save-full.saved-state { background: #15803d; }
 
-.btn-export-icon {
-  width: 46px;
-  padding: 13px;
-  border-radius: 13px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text-2);
-  font-size: 1.1rem;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: border-color 0.12s;
-  flex-shrink: 0;
+.btn-export {
+  padding: 12px 14px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--text-2); font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: border-color 0.1s, color 0.1s; white-space: nowrap; flex-shrink: 0;
 }
-.btn-export-icon:hover {
-  border-color: var(--accent);
-  background: var(--accent-lt);
-  color: var(--accent);
-}
+.btn-export:hover { border-color: var(--accent); color: var(--accent); }
 
-/* ── Export Panel ─────────────────────────────────────── */
 .export-panel {
-  background: var(--surface);
-  border-radius: 20px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-  width: 100%;
-  overflow: hidden;
-  display: none;
+  background: var(--surface); border-radius: 18px;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+  width: 100%; overflow: hidden; display: none;
 }
 .export-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
 }
-.export-header h3 { font-size: 0.9rem; font-weight: 700; }
+.export-header h3 { font-size: 0.88rem; font-weight: 700; }
 .export-close {
-  width: 28px; height: 28px;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.8rem;
-  color: var(--text-2);
+  width: 26px; height: 26px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; color: var(--text-2); font-family: 'DM Sans', sans-serif;
 }
-.export-stats {
-  display: flex;
-  gap: 8px;
-  padding: 12px 20px;
-  flex-wrap: wrap;
-}
+.export-stats { display: flex; gap: 6px; padding: 10px 18px; flex-wrap: wrap; }
 .export-stat {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 7px;
-  background: var(--bg);
-  color: var(--text-2);
+  font-size: 0.72rem; font-weight: 600; padding: 3px 9px;
+  border-radius: 6px; background: var(--bg); color: var(--text-2);
   border: 1px solid var(--border);
 }
 .export-stat span { color: var(--accent); }
 textarea#outputBox {
-  width: 100%;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.68rem;
-  background: #111827;
-  color: #6EE7B7;
-  border: none;
-  resize: vertical;
-  min-height: 140px;
-  padding: 14px 16px;
-  outline: none;
-  line-height: 1.6;
+  width: 100%; font-family: 'DM Mono', monospace; font-size: 0.67rem;
+  background: #0F172A; color: #6EE7B7; border: none;
+  resize: vertical; min-height: 120px; padding: 12px 16px; outline: none; line-height: 1.6;
 }
-.export-actions {
-  padding: 12px 20px;
-  display: flex;
-  gap: 8px;
-}
+.export-actions { padding: 10px 18px; display: flex; gap: 7px; }
 .btn-copy {
-  flex: 1;
-  padding: 11px;
-  border-radius: 11px;
-  border: none;
-  background: var(--accent);
-  color: white;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  transition: background 0.12s;
+  flex: 1; padding: 10px; border-radius: 10px; border: none;
+  background: var(--accent); color: white;
+  font-family: 'DM Sans', sans-serif; font-size: 0.84rem; font-weight: 700;
+  cursor: pointer; transition: background 0.1s;
 }
-.btn-copy:hover { background: #3b55d9; }
+.btn-copy:hover { background: #2e4cc7; }
 .btn-download {
-  padding: 11px 16px;
-  border-radius: 11px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text-2);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: border-color 0.12s;
+  padding: 10px 14px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--text-2); font-family: 'DM Sans', sans-serif;
+  font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: border-color 0.1s, color 0.1s;
 }
 .btn-download:hover { border-color: var(--accent); color: var(--accent); }
 
-/* ── Toast ────────────────────────────────────────────── */
 .toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
+  position: fixed; bottom: 24px; left: 50%;
   transform: translateX(-50%) translateY(80px);
-  background: #111827;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 99px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 9999;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  white-space: nowrap;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  background: #111827; color: white; padding: 9px 18px;
+  border-radius: 99px; font-size: 0.8rem; font-weight: 600;
+  z-index: 9999; transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,0.2);
   pointer-events: none;
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
-
-/* ── Empty state ──────────────────────────────────────── */
-.empty-strokes {
-  font-size: 0.75rem;
-  color: var(--text-3);
-  font-weight: 500;
-  text-align: center;
-  padding: 4px 0 4px;
-}
 </style>
 </head>
 <body>
 
-<!-- Top Bar -->
 <div class="topbar">
-  <div class="topbar-title">
-    <div class="topbar-icon">ཀ</div>
-    <h1>Stroke Recorder <span>/ Tibetan</span></h1>
+  <div class="topbar-brand">
+    <div class="topbar-logo">ཀ</div>
+    <h1>Stroke Recorder <small>Tibetan Alphabet</small></h1>
   </div>
   <div class="progress-pill" id="progressPill">0 / 30</div>
 </div>
 
 <div class="layout">
 
-  <!-- Letter Grid -->
   <div class="section-label">Select Letter</div>
   <div class="letter-grid" id="letterGrid"></div>
 
-  <!-- Main Drawing Card -->
   <div class="card">
 
-    <!-- Header -->
     <div class="letter-header">
       <div class="letter-bigchar" id="bigChar">ཀ</div>
       <div class="letter-info">
@@ -552,339 +332,171 @@ textarea#outputBox {
       <div class="strokes-badge" id="strokesBadge">0 strokes</div>
     </div>
 
-    <!-- Canvas -->
     <div class="canvas-wrapper" id="canvasWrap">
       <canvas id="bgCanvas"></canvas>
       <canvas id="drawCanvas"></canvas>
     </div>
 
-    <!-- Processing Stats -->
-    <div class="processing-info" id="processingInfo" style="display:none;">
-      <div class="processing-stat">Raw: <span id="statRaw">0</span> pts</div>
-      <div class="processing-stat">Filtered: <span id="statFiltered">0</span> pts</div>
-      <div class="processing-stat">Simplified: <span id="statSimplified">0</span> pts</div>
+    <div class="processing-info" id="processingInfo" style="display:none">
+      <div class="p-stat">Raw: <span id="statRaw">0</span> pts</div>
+      <div class="p-stat">Filtered: <span id="statFiltered">0</span> pts</div>
+      <div class="p-stat">Simplified: <span id="statSimplified">0</span> pts</div>
     </div>
 
-    <!-- Stroke Info -->
     <div class="stroke-bar">
-      <div class="stroke-chip" id="strokeChip" style="background:#4F6BF0">Stroke 1</div>
-      <div class="stroke-hint" id="strokeHint">Draw the first stroke</div>
+      <div class="stroke-chip" id="strokeChip" style="background:var(--accent)">Stroke 1</div>
+      <div class="stroke-hint" id="strokeHint">Draw the first stroke on the canvas above</div>
     </div>
 
-    <!-- Strokes List -->
     <div class="strokes-panel" id="strokesPanel">
       <div class="empty-strokes" id="emptyStrokes">No strokes yet — start drawing above</div>
     </div>
 
     <div class="divider"></div>
 
-    <!-- 4 Action Buttons -->
     <div class="btn-grid">
-      <button class="btn btn-undo"   onclick="undoPoint()">
-        <span class="btn-icon">↩</span>Undo
+      <button class="btn btn-undo" onclick="undoPoint()">
+        <span class="btn-sym">&#8630;</span>Undo
       </button>
-      <button class="btn btn-clear"  onclick="clearStroke()">
-        <span class="btn-icon">🗑</span>Clear
+      <button class="btn btn-clear" onclick="clearStroke()">
+        <span class="btn-sym">&#215;</span>Clear
       </button>
       <button class="btn btn-stroke" onclick="addStroke()">
-        <span class="btn-icon">＋</span>Add Stroke
+        <span class="btn-sym">+</span>Add Stroke
       </button>
-      <button class="btn btn-save"   onclick="saveLetter()">
-        <span class="btn-icon">💾</span>Save
+      <button class="btn btn-stroke" onclick="saveLetter()" style="background:var(--green-lt);color:var(--green)">
+        <span class="btn-sym">&#10003;</span>Save
       </button>
     </div>
 
-    <!-- Save + Export Row -->
     <div class="save-row">
       <button class="btn-save-full" id="saveBtn" onclick="saveLetter()">
-        ✓ Save Letter & Continue
+        Save Letter &amp; Continue
       </button>
-      <button class="btn-export-icon" onclick="toggleExport()" title="Export JSON">📦</button>
+      <button class="btn-export" onclick="toggleExport()">Export JSON</button>
     </div>
 
   </div>
 
-  <!-- Export Panel -->
   <div class="export-panel" id="exportPanel">
     <div class="export-header">
       <h3>Export JSON Data</h3>
-      <button class="export-close" onclick="toggleExport()">✕</button>
+      <button class="export-close" onclick="toggleExport()">&#215;</button>
     </div>
     <div class="export-stats" id="exportStats"></div>
-    <textarea id="outputBox" readonly placeholder="Save some letters first…"></textarea>
+    <textarea id="outputBox" readonly placeholder="Save some letters first to export…"></textarea>
     <div class="export-actions">
-      <button class="btn-copy" onclick="copyJSON()">📋 Copy JSON</button>
-      <button class="btn-download" onclick="downloadJSON()">⬇ Download</button>
+      <button class="btn-copy" onclick="copyJSON()">Copy JSON</button>
+      <button class="btn-download" onclick="downloadJSON()">Download</button>
     </div>
   </div>
 
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
 /* ═══════════════════════════════════════════════════════
-   CONFIGURATION CONSTANTS
+   CONFIGURATION
 ═══════════════════════════════════════════════════════ */
 const CONFIG = {
-  // Point processing thresholds (in normalized coordinates 0-1)
-  SIMPLIFY_EPSILON: 0.008,     // Douglas-Peucker tolerance
-  MIN_PT_DISTANCE: 0.015,       // Minimum distance between points after normalization
-  SPLINE_TENSION: 0.5,          // Catmull-Rom tension (0.5 = standard)
-  CANVAS_PADDING: 0.13,         // Padding around letter (13%)
-  CANVAS_SIZE: 1000,            // Reference size for normalized output
-
-  // Raw capture settings (in screen pixels)
-  RAW_MIN_DISTANCE: 8,          // Min pixels between raw captured points
-  RAW_MIN_DISTANCE_INITIAL: 4,  // Min pixels for first few points
+  SIMPLIFY_EPSILON:      0.008,  // Douglas-Peucker tolerance (normalized 0-1)
+  MIN_PT_DISTANCE:       0.015,  // Minimum point spacing (normalized 0-1)
+  CANVAS_SIZE:           1000,   // Reference size for export metadata only
+  RAW_MIN_DISTANCE:      8,      // Min px between raw captured points
+  RAW_MIN_DISTANCE_INIT: 4,      // Min px for first few points
 };
 
 /* ═══════════════════════════════════════════════════════
-   GEOMETRY ALGORITHMS
+   GEOMETRY
 ═══════════════════════════════════════════════════════ */
-
-/**
- * Calculate Euclidean distance between two points
- */
-function distance(p1, p2) {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
+function dist(p1, p2) {
+  const dx = p2.x - p1.x, dy = p2.y - p1.y;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-/**
- * Calculate perpendicular distance from point p to line segment vw
- */
-function perpendicularDistance(p, v, w) {
+function perpDist(p, v, w) {
   const l2 = (w.x - v.x) ** 2 + (w.y - v.y) ** 2;
-  if (l2 === 0) return distance(p, v);
-
-  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
-  t = Math.max(0, Math.min(1, t));
-
-  const projection = {
-    x: v.x + t * (w.x - v.x),
-    y: v.y + t * (w.y - v.y)
-  };
-
-  return distance(p, projection);
+  if (l2 === 0) return dist(p, v);
+  const t = Math.max(0, Math.min(1,
+    ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2));
+  return dist(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
 }
 
-/**
- * Douglas-Peucker point simplification algorithm
- * Reduces point count while preserving shape
- * @param {Array} points - Array of {x, y} points
- * @param {number} epsilon - Tolerance for simplification
- * @returns {Array} Simplified points
- */
-function simplifyPoints(points, epsilon) {
-  if (points.length <= 2) return points;
-
-  let maxDist = 0;
-  let maxIndex = 0;
-  const start = points[0];
-  const end = points[points.length - 1];
-
-  // Find point with maximum distance from line
-  for (let i = 1; i < points.length - 1; i++) {
-    const dist = perpendicularDistance(points[i], start, end);
-    if (dist > maxDist) {
-      maxDist = dist;
-      maxIndex = i;
-    }
+// Douglas-Peucker simplification
+function simplify(pts, eps) {
+  if (pts.length <= 2) return pts;
+  let maxD = 0, maxI = 0;
+  const s = pts[0], e = pts[pts.length - 1];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = perpDist(pts[i], s, e);
+    if (d > maxD) { maxD = d; maxI = i; }
   }
-
-  // If max distance is greater than epsilon, recursively simplify
-  if (maxDist > epsilon) {
-    const left = simplifyPoints(points.slice(0, maxIndex + 1), epsilon);
-    const right = simplifyPoints(points.slice(maxIndex), epsilon);
-
-    // Combine results, removing duplicate point at the junction
-    return left.slice(0, -1).concat(right);
+  if (maxD > eps) {
+    const L = simplify(pts.slice(0, maxI + 1), eps);
+    const R = simplify(pts.slice(maxI), eps);
+    return L.slice(0, -1).concat(R);
   }
-
-  // All points are within tolerance, return just endpoints
-  return [start, end];
+  return [s, e];
 }
 
-/**
- * Catmull-Rom spline interpolation
- * Generates smooth curves that pass through all control points
- * @param {Array} points - Control points
- * @param {number} tension - Tension parameter (0.5 = standard Catmull-Rom)
- * @param {number} segments - Number of segments to generate between each pair of points
- * @returns {Array} Smoothed points
- */
-function catmullRomSpline(points, tension = 0.5, segments = 8) {
-  if (points.length < 2) return points;
-  if (points.length === 2) return points;
-
-  const result = [];
-
-  // Add first point
-  result.push(points[0]);
-
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[Math.max(0, i - 1)];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[Math.min(points.length - 1, i + 2)];
-
-    // Generate segments between p1 and p2
-    for (let t = 1; t <= segments; t++) {
-      const t1 = t / segments;
-
-      // Catmull-Rom formula
-      const t2 = t1 * t1;
-      const t3 = t2 * t1;
-
-      const x = 0.5 * (
-        (2 * p1.x) +
-        (-p0.x + p2.x) * t1 +
-        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
-      );
-
-      const y = 0.5 * (
-        (2 * p1.y) +
-        (-p0.y + p2.y) * t1 +
-        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
-      );
-
-      result.push({ x, y });
-    }
+// Adaptive min-distance filter
+function minDistFilter(pts, threshold) {
+  if (pts.length <= 1) return pts;
+  const out = [pts[0]];
+  let last = pts[0];
+  for (let i = 1; i < pts.length; i++) {
+    const th = out.length < 5 ? threshold * 0.5 : threshold;
+    if (dist(pts[i], last) >= th) { out.push(pts[i]); last = pts[i]; }
   }
-
-  return result;
+  const tail = pts[pts.length - 1];
+  if (dist(out[out.length - 1], tail) > 0) out.push(tail);
+  return out;
 }
 
-/**
- * Find bounding box of all points across all strokes
- */
-function findBoundingBox(strokes) {
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
-
-  strokes.forEach(stroke => {
-    stroke.points.forEach(p => {
-      if (p.x < minX) minX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y > maxY) maxY = p.y;
-    });
-  });
-
-  return { minX, minY, maxX, maxY };
+// Full point-processing pipeline
+function processPoints(rawPts) {
+  const stats = { raw: rawPts.length, filtered: 0, simplified: 0 };
+  if (rawPts.length < 2) return { points: rawPts, stats };
+  let pts = minDistFilter(rawPts, CONFIG.RAW_MIN_DISTANCE);
+  stats.filtered = pts.length;
+  pts = simplify(pts, CONFIG.SIMPLIFY_EPSILON * CSIZE);
+  stats.simplified = pts.length;
+  return { points: pts, stats };
 }
 
-/**
- * Normalize points to 0-1 coordinate system
- * @param {Array} rawStrokes - Raw strokes with screen coordinates
- * @returns {Object} Normalized strokes with bounding box info
- */
-function normalizeToUnitSquare(rawStrokes) {
-  if (rawStrokes.length === 0) return { strokes: [], bounds: null };
+/* ═══════════════════════════════════════════════════════
+   NORMALIZE — stores coords EXACTLY as drawn (no rescaling)
+   Simply divides pixel coords by CSIZE to get 0..1 range.
+   On reload, multiply by CSIZE to restore pixel coords.
+═══════════════════════════════════════════════════════ */
+function normalize(rawStrokes) {
+  if (!rawStrokes.length) return { strokes: [], bounds: null };
 
-  // Find bounding box
-  const bounds = findBoundingBox(rawStrokes);
-  const width = bounds.maxX - bounds.minX || 1;
-  const height = bounds.maxY - bounds.minY || 1;
-  const size = Math.max(width, height);
+  const r4 = v => Math.round(v * 10000) / 10000;
 
-  // Add padding and normalize
-  const padding = CONFIG.CANVAS_PADDING;
-  const availableSize = 1 - padding * 2;
-  const scale = availableSize / size;
-
-  const offsetX = padding + (availableSize - width * scale) / 2 - bounds.minX * scale;
-  const offsetY = padding + (availableSize - height * scale) / 2 - bounds.minY * scale;
-
-  const normalized = rawStrokes.map(stroke => ({
-    type: stroke.type || 'path',
-    points: stroke.points.map(p => ({
-      x: Math.round((p.x * scale + offsetX) * 10000) / 10000,  // 4 decimal precision
-      y: Math.round((p.y * scale + offsetY) * 10000) / 10000
-    }))
+  // Compute bounding box for metadata only — NOT used for scaling
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  rawStrokes.forEach(s => s.points.forEach(p => {
+    const nx = p.x / CSIZE, ny = p.y / CSIZE;
+    if (nx < minX) minX = nx; if (ny < minY) minY = ny;
+    if (nx > maxX) maxX = nx; if (ny > maxY) maxY = ny;
   }));
 
   return {
-    strokes: normalized,
+    strokes: rawStrokes.map(s => ({
+      type: 'path',
+      // Store exact position: just divide by canvas size
+      points: s.points.map(p => ({
+        x: r4(p.x / CSIZE),
+        y: r4(p.y / CSIZE)
+      }))
+    })),
     bounds: {
-      minX: Math.round((bounds.minX * scale + offsetX) * 1000) / 1000,
-      maxX: Math.round((bounds.maxX * scale + offsetX) * 1000) / 1000,
-      minY: Math.round((bounds.minY * scale + offsetY) * 1000) / 1000,
-      maxY: Math.round((bounds.maxY * scale + offsetY) * 1000) / 1000
+      minX: r4(minX), maxX: r4(maxX),
+      minY: r4(minY), maxY: r4(maxY)
     }
   };
-}
-
-/**
- * Apply adaptive minimum distance filter
- * Removes points that are too close together, with adaptive threshold
- */
-function adaptiveMinDistanceFilter(points, baseThreshold) {
-  if (points.length <= 1) return points;
-
-  const filtered = [points[0]];
-  let lastPoint = points[0];
-
-  for (let i = 1; i < points.length; i++) {
-    const dist = distance(points[i], lastPoint);
-
-    // For first few points, use smaller threshold to capture detail
-    const threshold = filtered.length < 5
-      ? baseThreshold * 0.5
-      : baseThreshold;
-
-    if (dist >= threshold) {
-      filtered.push(points[i]);
-      lastPoint = points[i];
-    }
-  }
-
-  // Always ensure last point is included
-  if (filtered.length > 0 && distance(filtered[filtered.length - 1], points[points.length - 1]) > 0) {
-    filtered.push(points[points.length - 1]);
-  }
-
-  return filtered;
-}
-
-/**
- * Process raw stroke points through the full pipeline:
- * 1. Min distance filter
- * 2. Douglas-Peucker simplification
- * 3. Catmull-Rom smoothing
- * Returns processing stats
- */
-function processStrokePoints(rawPoints) {
-  const stats = {
-    raw: rawPoints.length,
-    filtered: 0,
-    simplified: 0,
-    final: 0
-  };
-
-  if (rawPoints.length < 2) {
-    return { points: rawPoints, stats };
-  }
-
-  // Step 1: Min distance filter (in screen pixels first)
-  const minDist = CONFIG.RAW_MIN_DISTANCE;
-  let points = adaptiveMinDistanceFilter(rawPoints, minDist);
-  stats.filtered = points.length;
-
-  // Step 2: Douglas-Peucker simplification (still in screen coords)
-  // Convert epsilon to screen pixels (assuming ~440px canvas)
-  const screenEpsilon = CONFIG.SIMPLIFY_EPSILON * 440;
-  points = simplifyPoints(points, screenEpsilon);
-  stats.simplified = points.length;
-
-  stats.final = points.length;
-
-  return { points, stats };
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -924,46 +536,45 @@ const ALPHABET = [
 ];
 
 const COLORS = [
-  '#4F6BF0','#E07B39','#16A34A','#DC2626',
+  '#3B5CE5','#E07B39','#16A34A','#DC2626',
   '#9333EA','#0891B2','#CA8A04','#BE185D',
 ];
 
 /* ═══════════════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════════════ */
-let savedData    = {};
-let currentIdx   = 0;
-let strokes      = [];   // committed strokes [{color,points:[],rawPoints:[]}]
-let currentPts   = [];   // in-progress stroke (raw)
-let isDrawing    = false;
-let lastPt       = null;
+let savedData  = {};
+let currentIdx = 0;
+let strokes    = [];      // committed strokes [{color, points, rawPoints, stats}]
+let currentPts = [];      // in-progress raw points
+let isDrawing  = false;
+let lastPt     = null;
 
-// Load from localStorage
+// Use new storage key so old inflated data doesn't interfere
+const STORAGE_KEY = 'tib_paths_v4_exact';
 try {
-  const raw = localStorage.getItem('tib_paths_v3');
+  const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) savedData = JSON.parse(raw);
 } catch(e) {}
 
 /* ═══════════════════════════════════════════════════════
-   CANVAS SETUP — responsive, hi-DPI
+   CANVAS SETUP
 ═══════════════════════════════════════════════════════ */
-const wrap      = document.getElementById('canvasWrap');
-const bgCanvas  = document.getElementById('bgCanvas');
-const drawCanvas= document.getElementById('drawCanvas');
+const wrap       = document.getElementById('canvasWrap');
+const bgCanvas   = document.getElementById('bgCanvas');
+const drawCanvas = document.getElementById('drawCanvas');
 let bc, dc, CSIZE, DPR;
 
 function setupCanvas() {
-  DPR   = window.devicePixelRatio || 1;
+  DPR = window.devicePixelRatio || 1;
   const rect = wrap.getBoundingClientRect();
   CSIZE = rect.width;
-
   [bgCanvas, drawCanvas].forEach(c => {
     c.width  = Math.round(CSIZE * DPR);
     c.height = Math.round(CSIZE * DPR);
     c.style.width  = CSIZE + 'px';
     c.style.height = CSIZE + 'px';
   });
-
   bc = bgCanvas.getContext('2d');
   dc = drawCanvas.getContext('2d');
   bc.scale(DPR, DPR);
@@ -971,111 +582,77 @@ function setupCanvas() {
 }
 
 function getPos(e) {
-  const rect  = wrap.getBoundingClientRect();
-  const src   = e.touches ? e.touches[0] : e;
-  const scale = CSIZE / rect.width;
+  const rect = wrap.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
   return {
-    x: (src.clientX - rect.left) * scale,
-    y: (src.clientY - rect.top)  * scale,
+    x: (src.clientX - rect.left) * (CSIZE / rect.width),
+    y: (src.clientY - rect.top)  * (CSIZE / rect.height),
   };
 }
 
 /* ═══════════════════════════════════════════════════════
-   DRAW BACKGROUND
+   DRAWING
 ═══════════════════════════════════════════════════════ */
 function drawBg() {
   bc.clearRect(0, 0, CSIZE, CSIZE);
-
-  // Subtle grid
-  bc.strokeStyle = '#E9ECF6';
-  bc.lineWidth   = 1;
-  bc.setLineDash([3, 6]);
-  const thirds = [CSIZE/3, CSIZE*2/3];
-  thirds.forEach(v => {
-    bc.beginPath(); bc.moveTo(v, 0); bc.lineTo(v, CSIZE); bc.stroke();
-    bc.beginPath(); bc.moveTo(0, v); bc.lineTo(CSIZE, v); bc.stroke();
+  bc.strokeStyle = '#E9ECF6'; bc.lineWidth = 1; bc.setLineDash([3, 6]);
+  [CSIZE / 3, CSIZE * 2 / 3].forEach(v => {
+    bc.beginPath(); bc.moveTo(v, 0);     bc.lineTo(v, CSIZE);  bc.stroke();
+    bc.beginPath(); bc.moveTo(0, v);     bc.lineTo(CSIZE, v);  bc.stroke();
   });
   bc.setLineDash([]);
-
-  // Center cross (solid)
-  bc.strokeStyle = '#D1D8EE';
-  bc.lineWidth   = 1;
-  bc.beginPath(); bc.moveTo(CSIZE/2, 0); bc.lineTo(CSIZE/2, CSIZE); bc.stroke();
-  bc.beginPath(); bc.moveTo(0, CSIZE/2); bc.lineTo(CSIZE, CSIZE/2); bc.stroke();
-
-  // Ghost letter — measure and center precisely
-  const fontSize = Math.round(CSIZE * 0.62);
-  bc.font = `700 ${fontSize}px "Noto Serif Tibetan", serif`;
-  bc.textAlign    = 'center';
-  bc.textBaseline = 'alphabetic';
-
-  const char   = ALPHABET[currentIdx].char;
-  const metrics = bc.measureText(char);
-  const textH  = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-  const yOff   = CSIZE/2 + metrics.actualBoundingBoxAscent - textH/2;
-
-  bc.fillStyle = 'rgba(79,107,240,0.07)';
-  bc.fillText(char, CSIZE/2, yOff);
+  bc.strokeStyle = '#D1D8EE'; bc.lineWidth = 1;
+  bc.beginPath(); bc.moveTo(CSIZE / 2, 0);     bc.lineTo(CSIZE / 2, CSIZE); bc.stroke();
+  bc.beginPath(); bc.moveTo(0, CSIZE / 2);     bc.lineTo(CSIZE, CSIZE / 2); bc.stroke();
+  // Ghost letter
+  const fs = Math.round(CSIZE * 0.62);
+  bc.font = `700 ${fs}px "Noto Serif Tibetan", serif`;
+  bc.textAlign = 'center'; bc.textBaseline = 'alphabetic';
+  const char = ALPHABET[currentIdx].char;
+  const m = bc.measureText(char);
+  const th = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  bc.fillStyle = 'rgba(59,92,229,0.07)';
+  bc.fillText(char, CSIZE / 2, CSIZE / 2 + m.actualBoundingBoxAscent - th / 2);
 }
 
-/* ═══════════════════════════════════════════════════════
-   DRAW STROKES
-═══════════════════════════════════════════════════════ */
 function redraw() {
   dc.clearRect(0, 0, CSIZE, CSIZE);
-
-  // Committed strokes
   strokes.forEach((s, si) => {
-    const pts = s.points;
-    if (pts.length < 1) return;
-    drawStrokeLine(pts, s.color, 1.0);
-    drawStrokeDots(pts, s.color, si + 1, 1.0);
+    if (s.points.length < 1) return;
+    drawLine(s.points, s.color, 1.0);
+    drawDots(s.points, s.color, si + 1, 1.0);
   });
-
-  // In-progress stroke
   if (currentPts.length > 0) {
     const col = COLORS[strokes.length % COLORS.length];
-    drawStrokeLine(currentPts, col, 0.6);
-    drawStrokeDots(currentPts, col, strokes.length + 1, 0.6);
+    drawLine(currentPts, col, 0.55);
+    drawDots(currentPts, col, strokes.length + 1, 0.55);
   }
 }
 
-function drawStrokeLine(pts, color, alpha) {
+function drawLine(pts, color, alpha) {
   if (pts.length < 2) return;
-  dc.save();
-  dc.globalAlpha = alpha;
-  dc.beginPath();
-  dc.moveTo(pts[0].x, pts[0].y);
-  // Smooth curve through points
+  dc.save(); dc.globalAlpha = alpha;
+  dc.beginPath(); dc.moveTo(pts[0].x, pts[0].y);
   for (let i = 1; i < pts.length - 1; i++) {
-    const mx = (pts[i].x + pts[i+1].x) / 2;
-    const my = (pts[i].y + pts[i+1].y) / 2;
+    const mx = (pts[i].x + pts[i + 1].x) / 2;
+    const my = (pts[i].y + pts[i + 1].y) / 2;
     dc.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
   }
-  dc.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
-  dc.strokeStyle = color;
-  dc.lineWidth   = 4;
-  dc.lineCap     = 'round';
-  dc.lineJoin    = 'round';
-  dc.stroke();
-  dc.restore();
+  dc.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+  dc.strokeStyle = color; dc.lineWidth = 3.5;
+  dc.lineCap = 'round'; dc.lineJoin = 'round';
+  dc.stroke(); dc.restore();
 }
 
-function drawStrokeDots(pts, color, num, alpha) {
-  dc.save();
-  dc.globalAlpha = alpha;
+function drawDots(pts, color, num, alpha) {
+  dc.save(); dc.globalAlpha = alpha;
   pts.forEach((p, pi) => {
-    const r = pi === 0 ? 7 : 3.5;
-    dc.beginPath();
-    dc.arc(p.x, p.y, r, 0, Math.PI * 2);
-    dc.fillStyle = color;
-    dc.fill();
+    const r = pi === 0 ? 6.5 : 3;
+    dc.beginPath(); dc.arc(p.x, p.y, r, 0, Math.PI * 2);
+    dc.fillStyle = color; dc.fill();
     if (pi === 0) {
-      // Number label
-      dc.font = `bold ${Math.round(CSIZE * 0.025)}px DM Sans, sans-serif`;
-      dc.fillStyle = 'white';
-      dc.textAlign = 'center';
-      dc.textBaseline = 'middle';
+      dc.font = `bold ${Math.round(CSIZE * 0.024)}px DM Sans, sans-serif`;
+      dc.fillStyle = 'white'; dc.textAlign = 'center'; dc.textBaseline = 'middle';
       dc.fillText(num, p.x, p.y);
     }
   });
@@ -1085,15 +662,12 @@ function drawStrokeDots(pts, color, num, alpha) {
 /* ═══════════════════════════════════════════════════════
    POINTER EVENTS
 ═══════════════════════════════════════════════════════ */
-
 wrap.addEventListener('pointerdown', e => {
   e.preventDefault();
   wrap.setPointerCapture(e.pointerId);
-  isDrawing = true;
-  lastPt    = null;
+  isDrawing = true; lastPt = null;
   const pos = getPos(e);
-  currentPts = [pos];
-  lastPt = pos;
+  currentPts = [pos]; lastPt = pos;
   redraw();
 });
 
@@ -1101,21 +675,13 @@ wrap.addEventListener('pointermove', e => {
   if (!isDrawing) return;
   e.preventDefault();
   const pos = getPos(e);
-
-  // Adaptive minimum distance filter during capture
-  const minDist = currentPts.length < 5
-    ? CONFIG.RAW_MIN_DISTANCE_INITIAL
-    : CONFIG.RAW_MIN_DISTANCE;
-
+  const minD = currentPts.length < 5 ? CONFIG.RAW_MIN_DISTANCE_INIT : CONFIG.RAW_MIN_DISTANCE;
   if (lastPt) {
     const dx = pos.x - lastPt.x, dy = pos.y - lastPt.y;
-    if (Math.sqrt(dx*dx + dy*dy) < minDist) return;
+    if (Math.sqrt(dx * dx + dy * dy) < minD) return;
   }
-
-  currentPts.push(pos);
-  lastPt = pos;
-  redraw();
-  updateStrokeInfo();
+  currentPts.push(pos); lastPt = pos;
+  redraw(); updateStrokeInfo();
 });
 
 wrap.addEventListener('pointerup',     () => { isDrawing = false; });
@@ -1130,107 +696,70 @@ function undoPoint() {
     lastPt = currentPts[currentPts.length - 1] || null;
   } else if (strokes.length > 0) {
     const last = strokes.pop();
-    currentPts = [...last.rawPoints];
-    currentPts.pop();
+    currentPts = [...last.rawPoints]; currentPts.pop();
     lastPt = currentPts[currentPts.length - 1] || null;
     updateStrokesList();
   }
-  redraw();
-  updateStrokeInfo();
+  redraw(); updateStrokeInfo();
 }
 
 function clearStroke() {
-  currentPts = [];
-  lastPt     = null;
-  redraw();
-  updateStrokeInfo();
+  currentPts = []; lastPt = null;
+  redraw(); updateStrokeInfo();
 }
 
 function addStroke() {
-  if (currentPts.length < 2) { showToast('⚠️ Draw at least 2 points first'); return; }
-
-  // Process the stroke through our pipeline
-  const { points: processedPoints, stats } = processStrokePoints(currentPts);
-
+  if (currentPts.length < 2) { showToast('Draw at least 2 points first'); return; }
+  const { points, stats } = processPoints(currentPts);
   const col = COLORS[strokes.length % COLORS.length];
-  strokes.push({
-    color: col,
-    points: processedPoints,
-    rawPoints: [...currentPts],
-    stats: stats
-  });
-
-  currentPts = [];
-  lastPt     = null;
-
-  // Show processing info
+  strokes.push({ color: col, points, rawPoints: [...currentPts], stats });
+  currentPts = []; lastPt = null;
   updateProcessingInfo(stats);
-
-  updateStrokesList();
-  updateStrokeInfo();
-  redraw();
-  showToast(`✓ Stroke ${strokes.length} added (${stats.final} pts)`);
+  updateStrokesList(); updateStrokeInfo(); redraw();
+  showToast(`Stroke ${strokes.length} added (${stats.simplified} pts)`);
 }
 
 function doSave() {
   const all = [...strokes];
   if (currentPts.length >= 2) {
-    const { points: processedPoints, stats } = processStrokePoints(currentPts);
-    all.push({ color: COLORS[all.length % COLORS.length], points: processedPoints, rawPoints: [...currentPts], stats });
+    const { points, stats } = processPoints(currentPts);
+    all.push({ color: COLORS[all.length % COLORS.length], points, rawPoints: [...currentPts], stats });
   }
-  if (all.length === 0) { showToast('⚠️ No strokes to save'); return false; }
-
-  // Normalize to 0-1 coordinate system before saving
-  const { strokes: normalizedStrokes, bounds } = normalizeToUnitSquare(all);
-
-  savedData[currentIdx] = {
-    strokes: normalizedStrokes,
-    bounds: bounds,
-    canvasSize: CONFIG.CANVAS_SIZE
-  };
-
-  try { localStorage.setItem('tib_paths_v3', JSON.stringify(savedData)); } catch(e) {}
+  if (all.length === 0) { showToast('No strokes to save'); return false; }
+  const { strokes: normStrokes, bounds } = normalize(all);
+  savedData[currentIdx] = { strokes: normStrokes, bounds, canvasSize: CONFIG.CANVAS_SIZE };
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData)); } catch(e) {}
   return true;
+}
+
+/* ─────────────────────────────────────────────────────
+   restoreStrokes: multiply saved 0-1 coords back by
+   current CSIZE so playback is pixel-perfect at any size
+───────────────────────────────────────────────────── */
+function restoreStrokes(savedEntry) {
+  return savedEntry.strokes.map((s, i) => ({
+    color: COLORS[i % COLORS.length],
+    points: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
+    rawPoints: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
+    stats: { raw: 0, filtered: s.points.length, simplified: s.points.length }
+  }));
 }
 
 function saveLetter() {
   if (!doSave()) return;
-  currentPts = [];
-  lastPt     = null;
-
-  // Reload from saved data (which is normalized)
-  if (savedData[currentIdx]) {
-    const saved = savedData[currentIdx];
-    // Convert back to screen coordinates for display
-    const scale = CSIZE / CONFIG.CANVAS_SIZE;
-    strokes = saved.strokes.map((s, i) => ({
-      color: COLORS[i % COLORS.length],
-      points: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
-      rawPoints: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
-      stats: { raw: 0, filtered: s.points.length, simplified: s.points.length, final: s.points.length }
-    }));
-  } else {
-    strokes = [];
-  }
-
-  updateGrid();
-  updateHeader();
-  updateStrokesList();
-  redraw();
-
+  currentPts = []; lastPt = null;
+  strokes = savedData[currentIdx] ? restoreStrokes(savedData[currentIdx]) : [];
+  updateGrid(); updateHeader(); updateStrokesList(); redraw();
   const btn = document.getElementById('saveBtn');
-  btn.textContent = '✅ Saved!';
+  btn.textContent = 'Saved!';
   btn.classList.add('saved-state');
   setTimeout(() => {
-    btn.innerHTML = '✓ Save Letter &amp; Continue';
+    btn.textContent = 'Save Letter & Continue';
     btn.classList.remove('saved-state');
-  }, 1600);
-
-  showToast(`💾 ${ALPHABET[currentIdx].name} saved!`);
-
-  // Auto-advance to next unsaved
+  }, 1400);
+  showToast(`${ALPHABET[currentIdx].name} saved`);
   const next = ALPHABET.findIndex((_, i) => i > currentIdx && !savedData[i]);
-  if (next !== -1) setTimeout(() => selectLetter(next), 700);
+  if (next !== -1) setTimeout(() => selectLetter(next), 600);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1239,36 +768,13 @@ function saveLetter() {
 function selectLetter(idx) {
   if (idx === currentIdx) return;
   if ((strokes.length > 0 || currentPts.length >= 2) && !savedData[currentIdx]) {
-    if (!confirm(`Save current work on ${ALPHABET[currentIdx].char} before switching?`)) {
-      // just switch without saving
-    } else {
-      doSave();
-    }
+    if (confirm(`Save current work on ${ALPHABET[currentIdx].char} before switching?`)) doSave();
   }
   currentIdx = idx;
-
-  // Load from saved data (normalized) and convert to screen coords
-  if (savedData[idx]) {
-    const saved = savedData[idx];
-    const scale = CSIZE / CONFIG.CANVAS_SIZE;
-    strokes = saved.strokes.map((s, i) => ({
-      color: COLORS[i % COLORS.length],
-      points: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
-      rawPoints: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
-      stats: { raw: 0, filtered: s.points.length, simplified: s.points.length, final: s.points.length }
-    }));
-  } else {
-    strokes = [];
-  }
-
-  currentPts = [];
-  lastPt     = null;
-  updateGrid();
-  updateHeader();
-  updateStrokesList();
-  updateStrokeInfo();
-  drawBg();
-  redraw();
+  strokes = savedData[idx] ? restoreStrokes(savedData[idx]) : [];
+  currentPts = []; lastPt = null;
+  updateGrid(); updateHeader(); updateStrokesList(); updateStrokeInfo();
+  drawBg(); redraw();
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1282,7 +788,7 @@ function buildGrid() {
     btn.className = 'lgrid-btn';
     btn.textContent = l.char;
     btn.title = `${l.name} · ${l.desc}`;
-    btn.id    = `lb-${i}`;
+    btn.id = `lb-${i}`;
     btn.onclick = () => selectLetter(i);
     grid.appendChild(btn);
   });
@@ -1301,21 +807,21 @@ function updateGrid() {
 
 function updateHeader() {
   const l = ALPHABET[currentIdx];
-  document.getElementById('bigChar').textContent  = l.char;
-  document.getElementById('letterName').textContent = l.name;
-  document.getElementById('letterDesc').textContent = `${l.desc} · Tibetan alphabet`;
+  document.getElementById('bigChar').textContent   = l.char;
+  document.getElementById('letterName').textContent  = l.name;
+  document.getElementById('letterDesc').textContent  = `${l.desc} · Tibetan alphabet`;
   document.getElementById('strokesBadge').textContent =
     `${strokes.length} stroke${strokes.length !== 1 ? 's' : ''}`;
-  const total = Object.keys(savedData).length;
-  document.getElementById('progressPill').textContent = `${total} / ${ALPHABET.length}`;
+  document.getElementById('progressPill').textContent =
+    `${Object.keys(savedData).length} / ${ALPHABET.length}`;
 }
 
 function updateProcessingInfo(stats) {
   const info = document.getElementById('processingInfo');
   if (stats) {
     info.style.display = 'flex';
-    document.getElementById('statRaw').textContent = stats.raw;
-    document.getElementById('statFiltered').textContent = stats.filtered;
+    document.getElementById('statRaw').textContent       = stats.raw;
+    document.getElementById('statFiltered').textContent  = stats.filtered;
     document.getElementById('statSimplified').textContent = stats.simplified;
   } else {
     info.style.display = 'none';
@@ -1326,12 +832,13 @@ function updateStrokeInfo() {
   const si  = strokes.length;
   const col = COLORS[si % COLORS.length];
   const pts = currentPts.length;
-  document.getElementById('strokeChip').textContent  = `Stroke ${si + 1}`;
-  document.getElementById('strokeChip').style.background = col;
+  const chip = document.getElementById('strokeChip');
+  chip.textContent = `Stroke ${si + 1}`;
+  chip.style.background = col;
   document.getElementById('strokeHint').textContent =
     pts === 0
-      ? `Draw stroke ${si + 1} on the letter above`
-      : `${pts} point${pts !== 1 ? 's' : ''} recorded — click "Add Stroke" to commit`;
+      ? `Draw stroke ${si + 1} on the canvas above`
+      : `${pts} point${pts !== 1 ? 's' : ''} — press Add Stroke to commit`;
   document.getElementById('strokesBadge').textContent =
     `${si} stroke${si !== 1 ? 's' : ''}`;
 }
@@ -1351,7 +858,7 @@ function updateStrokesList() {
       <div class="stroke-dot" style="background:${s.color}"></div>
       Stroke ${i + 1}
       <span class="stroke-pts">${s.points.length} pts</span>
-      <button class="stroke-del" onclick="deleteStroke(${i})">✕</button>
+      <button class="stroke-del" onclick="deleteStroke(${i})">&#215;</button>
     </div>
   `).join('') + `<div id="emptyStrokes" style="display:none"></div>`;
   updateStrokeInfo();
@@ -1360,9 +867,7 @@ function updateStrokesList() {
 function deleteStroke(idx) {
   strokes.splice(idx, 1);
   strokes = strokes.map((s, i) => ({ ...s, color: COLORS[i % COLORS.length] }));
-  updateStrokesList();
-  redraw();
-  showToast('Stroke removed');
+  updateStrokesList(); redraw(); showToast('Stroke removed');
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1370,106 +875,89 @@ function deleteStroke(idx) {
 ═══════════════════════════════════════════════════════ */
 function buildExportData() {
   const out = {
-    version: "1.0",
-    coordinateSystem: "normalized-0-1",
+    version: '2.0',
+    coordinateSystem: 'normalized-0-1-exact',
+    note: 'Coordinates are exact (x/canvasSize, y/canvasSize). No rescaling applied.',
     canvasSize: CONFIG.CANVAS_SIZE,
     letters: {}
   };
-
   ALPHABET.forEach((l, i) => {
     if (savedData[i]) {
       out.letters[l.char] = {
-        name: l.name,
-        index: i + 1,
+        name: l.name, index: i + 1,
         strokes: savedData[i].strokes,
         boundingBox: savedData[i].bounds
       };
     }
   });
-
   return out;
 }
 
 function toggleExport() {
-  const panel  = document.getElementById('exportPanel');
-  const isOpen = panel.style.display === 'flex';
-  if (isOpen) {
-    panel.style.display = 'none';
-    return;
-  }
-
-  // Auto-save current if has unsaved strokes
+  const panel = document.getElementById('exportPanel');
+  if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
   if ((strokes.length > 0 || currentPts.length >= 2) && !savedData[currentIdx]) doSave();
-
   const data = buildExportData();
-  const letters = Object.keys(data.letters);
-  if (letters.length === 0) { showToast('Save some letters first!'); return; }
-
+  const keys = Object.keys(data.letters);
+  if (keys.length === 0) { showToast('Save some letters first'); return; }
   const json = JSON.stringify(data, null, 2);
   document.getElementById('outputBox').value = json;
-
-  // Stats
-  const total = letters.length;
   let totalSt = 0, totalPts = 0;
   Object.values(data.letters).forEach(l => {
     totalSt += l.strokes.length;
     totalPts += l.strokes.reduce((a, s) => a + s.points.length, 0);
   });
-
-  document.getElementById('exportStats').innerHTML = `
-    <div class="export-stat">Format: <span>v1.0 normalized</span></div>
-    <div class="export-stat">Letters: <span>${total}</span></div>
-    <div class="export-stat">Strokes: <span>${totalSt}</span></div>
-    <div class="export-stat">Points: <span>${totalPts}</span></div>
-    <div class="export-stat">Size: <span>~${Math.round(json.length/1024*10)/10}KB</span></div>
-  `;
-
-  panel.style.display = 'flex';
-  panel.style.flexDirection = 'column';
+  document.getElementById('exportStats').innerHTML =
+    `<div class="export-stat">Format: <span>v2.0 exact</span></div>
+     <div class="export-stat">Letters: <span>${keys.length}</span></div>
+     <div class="export-stat">Strokes: <span>${totalSt}</span></div>
+     <div class="export-stat">Points: <span>${totalPts}</span></div>
+     <div class="export-stat">Size: <span>~${Math.round(json.length / 1024 * 10) / 10} KB</span></div>`;
+  panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function copyJSON() {
   const txt = document.getElementById('outputBox').value;
   if (!txt) { showToast('Nothing to copy'); return; }
-  navigator.clipboard.writeText(txt).then(() => showToast('📋 JSON copied!')).catch(() => {
-    document.getElementById('outputBox').select();
-    document.execCommand('copy');
-    showToast('📋 Copied!');
-  });
+  navigator.clipboard.writeText(txt)
+    .then(() => showToast('JSON copied to clipboard'))
+    .catch(() => { document.getElementById('outputBox').select(); document.execCommand('copy'); showToast('Copied'); });
 }
 
 function downloadJSON() {
   const txt = document.getElementById('outputBox').value;
   if (!txt) { showToast('Nothing to download'); return; }
-  const a    = document.createElement('a');
-  a.href     = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
-  a.download = 'tibetan_strokes_v1.json';
-  a.click();
-  showToast('⬇ Downloading…');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
+  a.download = 'tibetan_strokes_v2_exact.json';
+  a.click(); showToast('Downloading…');
 }
 
 /* ═══════════════════════════════════════════════════════
    TOAST
 ═══════════════════════════════════════════════════════ */
-let toastTimer;
+let _toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
 /* ═══════════════════════════════════════════════════════
-   RESIZE HANDLER
+   RESIZE
 ═══════════════════════════════════════════════════════ */
-let resizeTimer;
+let _resizeTimer;
 window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
     setupCanvas();
     drawBg();
+    // Re-scale restored strokes to new canvas size
+    if (savedData[currentIdx]) {
+      strokes = restoreStrokes(savedData[currentIdx]);
+    }
     redraw();
   }, 120);
 });
@@ -1481,25 +969,15 @@ buildGrid();
 updateHeader();
 
 document.fonts.ready.then(() => {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      setupCanvas();
-      drawBg();
-      // Load saved strokes for first letter if any
-      if (savedData[0]) {
-        const saved = savedData[0];
-        strokes = saved.strokes.map((s, i) => ({
-          color: COLORS[i % COLORS.length],
-          points: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
-          rawPoints: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
-          stats: { raw: 0, filtered: s.points.length, simplified: s.points.length, final: s.points.length }
-        }));
-        updateStrokesList();
-        redraw();
-      }
-      updateStrokeInfo();
-    });
-  });
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    setupCanvas(); drawBg();
+    if (savedData[0]) {
+      strokes = restoreStrokes(savedData[0]);
+      updateStrokesList();
+      redraw();
+    }
+    updateStrokeInfo();
+  }));
 });
 </script>
 </body>
