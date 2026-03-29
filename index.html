@@ -3,981 +3,1779 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Tibetan Stroke Recorder</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@500&family=Noto+Serif+Tibetan:wght@400;700&display=swap" rel="stylesheet">
+<title>Tibetan Stroke Recorder - Professional</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Noto+Serif+Tibetan:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:        #F3F5FA;
-  --surface:   #FFFFFF;
-  --border:    #E2E7F0;
-  --text-1:    #111827;
-  --text-2:    #4B5563;
-  --text-3:    #9CA3AF;
-  --accent:    #3B5CE5;
-  --accent-lt: #EEF1FE;
-  --green:     #16A34A;
-  --green-lt:  #DCFCE7;
-  --amber:     #D97706;
-  --amber-lt:  #FEF3C7;
-  --red:       #DC2626;
-  --red-lt:    #FEE2E2;
-  --radius:    14px;
-  --shadow:    0 2px 16px rgba(0,0,0,0.06);
-  --canvas-size: min(440px, calc(100vw - 40px));
+  --bg-primary: #0A0A0B;
+  --bg-secondary: #141416;
+  --bg-tertiary: #1C1C1F;
+  --bg-elevated: #222226;
+  --border-subtle: #2A2A2E;
+  --border-default: #333336;
+  --border-strong: #3F3F44;
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #A1A1AA;
+  --text-tertiary: #71717A;
+  --text-muted: #52525B;
+
+  --accent-primary: #6366F1;
+  --accent-hover: #818CF8;
+  --accent-subtle: rgba(99, 102, 241, 0.15);
+  --accent-glow: rgba(99, 102, 241, 0.4);
+
+  --success: #22C55E;
+  --success-subtle: rgba(34, 197, 94, 0.15);
+  --warning: #F59E0B;
+  --warning-subtle: rgba(245, 158, 11, 0.15);
+  --error: #EF4444;
+  --error-subtle: rgba(239, 68, 68, 0.15);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 40px var(--accent-glow);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --canvas-size: min(340px, calc(100vw - 32px));
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
-  color: var(--text-1);
-  padding-bottom: 48px;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
+  line-height: 1.5;
+  overflow-x: hidden;
 }
 
-.topbar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 13px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* ── Header ── */
+.header {
   position: sticky;
   top: 0;
   z-index: 100;
-  gap: 12px;
+  background: rgba(10, 10, 11, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 20px;
 }
-.topbar-brand {
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
+  justify-content: space-between;
+  gap: 20px;
 }
-.topbar-logo {
-  width: 34px; height: 34px;
-  background: var(--accent);
-  border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--accent-primary), #8B5CF6);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: 'Noto Serif Tibetan', serif;
-  font-size: 1rem; color: #fff; flex-shrink: 0;
-}
-.topbar h1 {
-  font-size: 0.9rem; font-weight: 700;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.topbar h1 small {
-  display: block; font-size: 0.72rem; font-weight: 400; color: var(--text-3);
-}
-.progress-pill {
-  font-size: 0.75rem; font-weight: 600;
-  background: var(--accent-lt); color: var(--accent);
-  padding: 4px 12px; border-radius: 99px; white-space: nowrap; flex-shrink: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-glow);
 }
 
-.layout {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 14px; padding: 18px 16px 0;
-  max-width: 520px; margin: 0 auto;
+.brand-text h1 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.section-label {
-  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--text-3);
-  width: 100%; padding: 0 2px;
+.brand-text p {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.header-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stat-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.stat-badge .icon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+}
+
+.stat-badge.completed .icon {
+  background: var(--success);
+}
+
+/* ── Main Layout ── */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: calc(100vh - 70px);
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Left Panel - Letter Grid ── */
+.panel-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.section-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
 }
 
 .letter-grid {
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 5px; width: 100%;
-}
-@media (max-width: 400px) {
-  .letter-grid { grid-template-columns: repeat(6, 1fr); }
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  overflow-y: auto;
+  max-height: 52px;
 }
 
-.lgrid-btn {
-  aspect-ratio: 1; border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  font-size: 1rem; font-family: 'Noto Serif Tibetan', serif;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: border-color 0.1s, background 0.1s;
-  color: var(--text-2); position: relative; padding: 0;
+.letter-btn {
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--border-subtle);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-family: 'Noto Serif Tibetan', serif;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
-.lgrid-btn:hover { border-color: var(--accent); background: var(--accent-lt); }
-.lgrid-btn.active {
-  border-color: var(--accent); background: var(--accent-lt); color: var(--accent); font-weight: 700;
+
+.letter-btn:hover {
+  border-color: var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  transform: translateY(-1px);
 }
-.lgrid-btn.saved {
-  border-color: var(--green); background: var(--green-lt); color: var(--green);
+
+.letter-btn:active {
+  transform: translateY(0);
 }
-.lgrid-btn.saved::after {
+
+.letter-btn.active {
+  border-color: var(--accent-primary);
+  background: var(--accent-subtle);
+  color: var(--accent-hover);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.letter-btn.saved {
+  border-color: var(--success);
+  background: var(--success-subtle);
+  color: var(--success);
+}
+
+.letter-btn.saved::after {
   content: '';
-  position: absolute; top: -3px; right: -3px;
-  width: 8px; height: 8px;
-  background: var(--green); border-radius: 50%;
-  border: 1.5px solid var(--bg);
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: var(--success);
+  border-radius: 50%;
+  border: 2px solid var(--bg-secondary);
 }
-.lgrid-btn.active.saved { border-color: var(--amber); background: var(--amber-lt); color: var(--amber); }
-.lgrid-btn.active.saved::after { background: var(--amber); }
+
+.letter-btn.active.saved {
+  border-color: var(--accent-primary);
+  background: var(--accent-subtle);
+}
+
+/* ── Right Panel - Canvas & Controls ── */
+.panel-right {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
 
 .card {
-  background: var(--surface); border-radius: 18px;
-  box-shadow: var(--shadow); border: 1px solid var(--border);
-  width: 100%; overflow: hidden;
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.letter-header {
-  display: flex; align-items: center; gap: 14px;
-  padding: 14px 18px; border-bottom: 1px solid var(--border);
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
 }
-.letter-bigchar {
-  font-size: 2rem; font-family: 'Noto Serif Tibetan', serif;
-  width: 52px; height: 52px; background: var(--bg);
-  border-radius: 12px; border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; line-height: 1;
+
+.letter-display {
+  width: 42px;
+  height: 42px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Noto Serif Tibetan', serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  flex-shrink: 0;
 }
-.letter-info { flex: 1; min-width: 0; }
-.letter-info h2 { font-size: 1.05rem; font-weight: 700; }
-.letter-info p  { font-size: 0.76rem; color: var(--text-3); margin-top: 2px; }
-.strokes-badge {
-  font-size: 0.72rem; font-weight: 600;
-  background: var(--bg); color: var(--text-2);
-  border: 1px solid var(--border); padding: 4px 10px; border-radius: 99px;
+
+.letter-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.letter-meta h2 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.letter-meta p {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+.strokes-count {
+  padding: 4px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ── Canvas ── */
+.canvas-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  min-height: 0;
 }
 
 .canvas-wrapper {
   position: relative;
-  width: var(--canvas-size); height: var(--canvas-size);
-  margin: 14px auto;
-  border-radius: 12px; border: 1px solid var(--border);
-  background: #FAFBFF; cursor: crosshair;
-  touch-action: none; overflow: hidden;
+  width: var(--canvas-size);
+  height: var(--canvas-size);
+  background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-tertiary) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  touch-action: none;
+  cursor: crosshair;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
 }
+
 .canvas-wrapper canvas {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.processing-info {
-  display: flex; gap: 6px; padding: 0 18px 10px; flex-wrap: wrap;
-}
-.p-stat {
-  font-size: 0.68rem; font-weight: 600;
-  padding: 3px 8px; border-radius: 5px;
-  background: var(--accent-lt); color: var(--accent);
-  border: 1px solid rgba(59,92,229,0.15);
-}
-.p-stat span { font-weight: 700; }
-
-.stroke-bar {
-  display: flex; align-items: center; gap: 10px; padding: 0 18px 10px;
-}
-.stroke-chip {
-  font-size: 0.72rem; font-weight: 700;
-  padding: 4px 12px; border-radius: 99px; color: white; white-space: nowrap;
-}
-.stroke-hint { font-size: 0.78rem; color: var(--text-2); }
-
-.strokes-panel { padding: 0 18px 10px; display: flex; flex-direction: column; gap: 4px; }
-.stroke-row {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 9px; padding: 6px 10px;
-  font-size: 0.78rem; font-weight: 600; color: var(--text-2);
-}
-.stroke-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.stroke-pts {
-  margin-left: auto; font-family: 'DM Mono', monospace;
-  font-size: 0.7rem; color: var(--text-3);
-}
-.stroke-del {
-  background: var(--red-lt); border: none; color: var(--red);
-  border-radius: 5px; padding: 2px 7px; font-size: 0.7rem;
-  font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif;
-  transition: background 0.1s;
-}
-.stroke-del:hover { background: #fca5a5; }
-.empty-strokes {
-  font-size: 0.74rem; color: var(--text-3); text-align: center; padding: 4px 0;
+/* ── Stroke Info ── */
+.stroke-info {
+  padding: 0 14px 8px;
+  flex-shrink: 0;
 }
 
-.divider { height: 1px; background: var(--border); margin: 0 18px; }
-
-.btn-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  gap: 7px; padding: 14px 18px;
+.stroke-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
 }
-@media (max-width: 360px) {
-  .btn-grid { grid-template-columns: repeat(2, 1fr); }
+
+.stroke-number {
+  padding: 3px 8px;
+  background: var(--accent-primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
+.stroke-hint {
+  flex: 1;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ── Side Panel (Controls + Info) ── */
+.side-panel {
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  border-left: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.side-panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.side-panel-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.side-controls {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.side-controls .btn {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 8px;
+  font-size: 0.7rem;
+}
+
+.side-controls .btn-icon {
+  font-size: 0.9rem;
+}
+
+.side-action-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Inter', sans-serif;
+}
+
+.side-action-btn:hover {
+  background: var(--accent-hover);
+}
+
+.side-action-btn.secondary {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.side-action-btn.secondary:hover {
+  background: var(--bg-primary);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.mini-strokes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.mini-stroke-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+}
+
+.mini-stroke-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.mini-stroke-info {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.mini-stroke-del {
+  padding: 2px 6px;
+  background: var(--error-subtle);
+  border: none;
+  border-radius: 3px;
+  color: var(--error);
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.empty-strokes-mini {
+  text-align: center;
+  padding: 12px;
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+}
+
+/* ── Buttons (shared) ── */
 .btn {
-  padding: 10px 6px; border-radius: 10px; border: none;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.76rem; font-weight: 700; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  line-height: 1.2; transition: filter 0.1s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
 }
-.btn:hover { filter: brightness(0.94); }
-.btn-sym { font-size: 0.9rem; line-height: 1; }
-.btn-undo   { background: var(--amber-lt); color: var(--amber); }
-.btn-clear  { background: var(--red-lt);   color: var(--red);   }
-.btn-stroke { background: var(--accent-lt);color: var(--accent); }
 
-.save-row { padding: 0 18px 18px; display: flex; gap: 7px; }
-.btn-save-full {
-  flex: 1; padding: 12px; border-radius: 12px; border: none;
-  background: var(--green); color: white;
-  font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 700;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
-  transition: background 0.12s;
+.btn:hover {
+  border-color: var(--border-default);
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
-.btn-save-full:hover { background: #15803d; }
-.btn-save-full.saved-state { background: #15803d; }
 
-.btn-export {
-  padding: 12px 14px; border-radius: 12px;
-  border: 1.5px solid var(--border); background: var(--surface);
-  color: var(--text-2); font-family: 'DM Sans', sans-serif;
-  font-size: 0.78rem; font-weight: 700; cursor: pointer;
-  display: flex; align-items: center; gap: 5px;
-  transition: border-color 0.1s, color 0.1s; white-space: nowrap; flex-shrink: 0;
+.btn:active {
+  transform: scale(0.97);
 }
-.btn-export:hover { border-color: var(--accent); color: var(--accent); }
 
+.btn-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.btn-undo { border-color: rgba(245, 158, 11, 0.3); }
+.btn-undo:hover { background: var(--warning-subtle); color: var(--warning); border-color: var(--warning); }
+
+.btn-clear { border-color: rgba(239, 68, 68, 0.3); }
+.btn-clear:hover { background: var(--error-subtle); color: var(--error); border-color: var(--error); }
+
+.btn-add { border-color: rgba(99, 102, 241, 0.3); }
+.btn-add:hover { background: var(--accent-subtle); color: var(--accent-primary); border-color: var(--accent-primary); }
+
+.btn-save { border-color: rgba(34, 197, 94, 0.3); }
+.btn-save:hover { background: var(--success-subtle); color: var(--success); border-color: var(--success); }
+
+/* ── Primary/Secondary Buttons (for export modal) ── */
+.btn-primary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--accent-primary), #8B5CF6);
+  border: none;
+  border-radius: var(--radius-lg);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+}
+
+.btn-primary.saved {
+  background: linear-gradient(135deg, var(--success), #16A34A);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+}
+
+.btn-secondary:hover {
+  border-color: var(--border-default);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* ── Export Panel ── */
 .export-panel {
-  background: var(--surface); border-radius: 18px;
-  box-shadow: var(--shadow); border: 1px solid var(--border);
-  width: 100%; overflow: hidden; display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
 }
-.export-header {
-  padding: 14px 18px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.export-header h3 { font-size: 0.88rem; font-weight: 700; }
-.export-close {
-  width: 26px; height: 26px; border-radius: 6px;
-  border: 1px solid var(--border); background: var(--bg);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  font-size: 0.78rem; color: var(--text-2); font-family: 'DM Sans', sans-serif;
-}
-.export-stats { display: flex; gap: 6px; padding: 10px 18px; flex-wrap: wrap; }
-.export-stat {
-  font-size: 0.72rem; font-weight: 600; padding: 3px 9px;
-  border-radius: 6px; background: var(--bg); color: var(--text-2);
-  border: 1px solid var(--border);
-}
-.export-stat span { color: var(--accent); }
-textarea#outputBox {
-  width: 100%; font-family: 'DM Mono', monospace; font-size: 0.67rem;
-  background: #0F172A; color: #6EE7B7; border: none;
-  resize: vertical; min-height: 120px; padding: 12px 16px; outline: none; line-height: 1.6;
-}
-.export-actions { padding: 10px 18px; display: flex; gap: 7px; }
-.btn-copy {
-  flex: 1; padding: 10px; border-radius: 10px; border: none;
-  background: var(--accent); color: white;
-  font-family: 'DM Sans', sans-serif; font-size: 0.84rem; font-weight: 700;
-  cursor: pointer; transition: background 0.1s;
-}
-.btn-copy:hover { background: #2e4cc7; }
-.btn-download {
-  padding: 10px 14px; border-radius: 10px;
-  border: 1.5px solid var(--border); background: var(--surface);
-  color: var(--text-2); font-family: 'DM Sans', sans-serif;
-  font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: border-color 0.1s, color 0.1s;
-}
-.btn-download:hover { border-color: var(--accent); color: var(--accent); }
 
-.toast {
-  position: fixed; bottom: 24px; left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  background: #111827; color: white; padding: 9px 18px;
-  border-radius: 99px; font-size: 0.8rem; font-weight: 600;
-  z-index: 9999; transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
-  white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-  pointer-events: none;
+.export-panel.open {
+  display: flex;
 }
-.toast.show { transform: translateX(-50%) translateY(0); }
+
+.export-modal {
+  width: 100%;
+  max-width: 600px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.2s ease;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.export-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-tertiary);
+}
+
+.export-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.export-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.export-close:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.export-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 20px;
+}
+
+.export-stat {
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.export-stat span {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.export-textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 16px;
+  background: #0D0D0E;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  color: #A5F3FC;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.export-textarea:focus {
+  outline: none;
+}
+
+.export-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--bg-tertiary);
+}
+
+.export-actions .btn-primary,
+.export-actions .btn-secondary {
+  flex: 1;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  padding: 12px 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 300;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ── Processing Info ── */
+.processing-info {
+  display: none;
+  gap: 6px;
+  padding: 0 16px 10px;
+}
+
+.processing-info.visible {
+  display: flex;
+}
+
+.proc-stat {
+  padding: 4px 10px;
+  background: var(--accent-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.proc-stat span {
+  color: var(--text-primary);
+}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-brand">
-    <div class="topbar-logo">ཀ</div>
-    <h1>Stroke Recorder <small>Tibetan Alphabet</small></h1>
-  </div>
-  <div class="progress-pill" id="progressPill">0 / 30</div>
-</div>
-
-<div class="layout">
-
-  <div class="section-label">Select Letter</div>
-  <div class="letter-grid" id="letterGrid"></div>
-
-  <div class="card">
-
-    <div class="letter-header">
-      <div class="letter-bigchar" id="bigChar">ཀ</div>
-      <div class="letter-info">
-        <h2 id="letterName">Ka</h2>
-        <p id="letterDesc">1st consonant · Tibetan alphabet</p>
+<header class="header">
+  <div class="header-content">
+    <div class="header-brand">
+      <div class="brand-logo">ཀ</div>
+      <div class="brand-text">
+        <h1>Tibetan Stroke Recorder</h1>
+        <p>Professional Edition</p>
       </div>
-      <div class="strokes-badge" id="strokesBadge">0 strokes</div>
     </div>
-
-    <div class="canvas-wrapper" id="canvasWrap">
-      <canvas id="bgCanvas"></canvas>
-      <canvas id="drawCanvas"></canvas>
+    <div class="header-stats">
+      <div class="stat-badge" id="progressBadge">
+        <span class="icon"></span>
+        <span id="progressText">0 / 30 letters</span>
+      </div>
     </div>
+  </div>
+</header>
 
-    <div class="processing-info" id="processingInfo" style="display:none">
-      <div class="p-stat">Raw: <span id="statRaw">0</span> pts</div>
-      <div class="p-stat">Filtered: <span id="statFiltered">0</span> pts</div>
-      <div class="p-stat">Simplified: <span id="statSimplified">0</span> pts</div>
+<main class="main">
+  <div class="panel-left">
+    <div class="section-header">
+      <span class="section-title">Select Letter</span>
     </div>
-
-    <div class="stroke-bar">
-      <div class="stroke-chip" id="strokeChip" style="background:var(--accent)">Stroke 1</div>
-      <div class="stroke-hint" id="strokeHint">Draw the first stroke on the canvas above</div>
-    </div>
-
-    <div class="strokes-panel" id="strokesPanel">
-      <div class="empty-strokes" id="emptyStrokes">No strokes yet — start drawing above</div>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="btn-grid">
-      <button class="btn btn-undo" onclick="undoPoint()">
-        <span class="btn-sym">&#8630;</span>Undo
-      </button>
-      <button class="btn btn-clear" onclick="clearStroke()">
-        <span class="btn-sym">&#215;</span>Clear
-      </button>
-      <button class="btn btn-stroke" onclick="addStroke()">
-        <span class="btn-sym">+</span>Add Stroke
-      </button>
-      <button class="btn btn-stroke" onclick="saveLetter()" style="background:var(--green-lt);color:var(--green)">
-        <span class="btn-sym">&#10003;</span>Save
-      </button>
-    </div>
-
-    <div class="save-row">
-      <button class="btn-save-full" id="saveBtn" onclick="saveLetter()">
-        Save Letter &amp; Continue
-      </button>
-      <button class="btn-export" onclick="toggleExport()">Export JSON</button>
-    </div>
-
+    <div class="letter-grid" id="letterGrid"></div>
   </div>
 
-  <div class="export-panel" id="exportPanel">
+  <div class="panel-right">
+    <div class="card">
+      <div class="card-header">
+        <div class="letter-display" id="letterDisplay">ཀ</div>
+        <div class="letter-meta">
+          <h2 id="letterName">Ka</h2>
+          <p id="letterDesc">First consonant of the Tibetan alphabet</p>
+        </div>
+        <div class="strokes-count" id="strokesCount">0 strokes</div>
+      </div>
+
+      <div class="stroke-info">
+        <div class="stroke-status">
+          <span class="stroke-number" id="strokeNumber">Stroke 1</span>
+          <span class="stroke-hint" id="strokeHint">Draw the first stroke on the canvas</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex: 1; min-height: 0; overflow: hidden;">
+        <div class="canvas-container">
+          <div class="canvas-wrapper" id="canvasWrapper">
+            <canvas id="bgCanvas"></canvas>
+            <canvas id="drawCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="side-panel">
+          <div class="side-panel-group">
+            <span class="side-panel-label">Drawing</span>
+            <div class="side-controls">
+              <button class="btn btn-undo" onclick="undoPoint()">
+                <span class="btn-icon">↩</span>
+                <span>Undo</span>
+              </button>
+              <button class="btn btn-clear" onclick="clearStroke()">
+                <span class="btn-icon">✕</span>
+                <span>Clear</span>
+              </button>
+              <button class="btn btn-add" onclick="addStroke()">
+                <span class="btn-icon">+</span>
+                <span>Add</span>
+              </button>
+              <button class="btn btn-save" onclick="saveLetter()">
+                <span class="btn-icon">✓</span>
+                <span>Save</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="side-panel-group">
+            <span class="side-panel-label">Actions</span>
+            <button class="side-action-btn" id="saveBtn" onclick="saveLetter()">
+              Save &amp; Continue →
+            </button>
+            <button class="side-action-btn secondary" onclick="openExport()">
+              Export JSON
+            </button>
+          </div>
+
+          <div class="side-panel-group" style="flex: 1; min-height: 0; overflow: hidden;">
+            <span class="side-panel-label">Strokes</span>
+            <div class="mini-strokes-list" id="strokesList">
+              <div class="empty-strokes-mini" id="emptyStrokes">No strokes yet</div>
+            </div>
+          </div>
+
+          <div class="processing-info" id="processingInfo" style="display: none; gap: 4px;">
+            <span class="proc-stat">Raw: <span id="statRaw">0</span></span>
+            <span class="proc-stat">Sim: <span id="statSimplified">0</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="export-panel" id="exportPanel">
+  <div class="export-modal">
     <div class="export-header">
-      <h3>Export JSON Data</h3>
-      <button class="export-close" onclick="toggleExport()">&#215;</button>
+      <h3>Export Stroke Data</h3>
+      <button class="export-close" onclick="closeExport()">✕</button>
     </div>
     <div class="export-stats" id="exportStats"></div>
-    <textarea id="outputBox" readonly placeholder="Save some letters first to export…"></textarea>
+    <textarea class="export-textarea" id="exportText" readonly></textarea>
     <div class="export-actions">
-      <button class="btn-copy" onclick="copyJSON()">Copy JSON</button>
-      <button class="btn-download" onclick="downloadJSON()">Download</button>
+      <button class="btn-secondary" onclick="downloadJSON()">
+        <span>Download</span>
+      </button>
+      <button class="btn-primary" onclick="copyJSON()">
+        <span>Copy to Clipboard</span>
+      </button>
     </div>
   </div>
-
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════════
+/* ═════════════════════════════════════════════════════════════
+   TIBETAN ALPHABET DATA (Accurate consonants)
+════════════════════════════════════════════════════════════ */
+const TIBETAN_ALPHABET = [
+  // Row 1 - Velars
+  { char: 'ཀ', name: 'Ka',   wylie: 'ka',   desc: 'First consonant, unaspirated velar stop' },
+  { char: 'ཁ', name: 'Kha',  wylie: 'kha',  desc: 'Aspirated velar stop' },
+  { char: 'ག', name: 'Ga',   wylie: 'ga',   desc: 'Voiced velar stop' },
+  { char: 'ང', name: 'Nga',  wylie: 'nga',  desc: 'Velar nasal' },
+
+  // Row 2 - Palatals
+  { char: 'ཅ', name: 'Ca',   wylie: 'ca',   desc: 'Unaspirated palatal stop' },
+  { char: 'ཆ', name: 'Cha',  wylie: 'cha',  desc: 'Aspirated palatal stop' },
+  { char: 'ཇ', name: 'Ja',   wylie: 'ja',   desc: 'Voiced palatal stop' },
+  { char: 'ཉ', name: 'Nya',  wylie: 'nya',  desc: 'Palatal nasal' },
+
+  // Row 3 - Dentals (retroflex in tradition)
+  { char: 'ཏ', name: 'Ta',   wylie: 'ta',   desc: 'Unaspirated dental stop' },
+  { char: 'ཐ', name: 'Tha',  wylie: 'tha',  desc: 'Aspirated dental stop' },
+  { char: 'ད', name: 'Da',   wylie: 'da',   desc: 'Voiced dental stop' },
+  { char: 'ན', name: 'Na',   wylie: 'na',   desc: 'Dental nasal' },
+
+  // Row 4 - Labials
+  { char: 'པ', name: 'Pa',   wylie: 'pa',   desc: 'Unaspirated bilabial stop' },
+  { char: 'ཕ', name: 'Pha',  wylie: 'pha',  desc: 'Aspirated bilabial stop' },
+  { char: 'བ', name: 'Ba',   wylie: 'ba',   desc: 'Voiced bilabial stop' },
+  { char: 'མ', name: 'Ma',   wylie: 'ma',   desc: 'Bilabial nasal' },
+
+  // Row 5 - Half-fricatives
+  { char: 'ཙ', name: 'Tsa',  wylie: 'tsa',  desc: 'Unaspirated alveolar affricate' },
+  { char: 'ཚ', name: 'Tsha', wylie: 'tsha', desc: 'Aspirated alveolar affricate' },
+  { char: 'ཛ', name: 'Dza',  wylie: 'dza',  desc: 'Voiced alveolar affricate' },
+  { char: 'ཝ', name: 'Wa',   wylie: 'wa',   desc: 'Labial approximant (semi-vowel)' },
+
+  // Row 6 - Continuants
+  { char: 'ཞ', name: 'Zha',  wylie: 'zha',  desc: 'Voiced retroflex fricative' },
+  { char: 'ཟ', name: 'Za',   wylie: 'za',   desc: 'Voiced alveolar fricative' },
+  { char: 'འ', name: "'A",   wylie: "'a",   desc: 'Voiced glottal approximant' },
+  { char: 'ཡ', name: 'Ya',   wylie: 'ya',   desc: 'Palatal approximant' },
+
+  // Row 7 - Continuants continued
+  { char: 'ར', name: 'Ra',   wylie: 'ra',   desc: 'Alveolar tap/trill' },
+  { char: 'ལ', name: 'La',   wylie: 'la',   desc: 'Lateral approximant' },
+  { char: 'ཤ', name: 'Sha',  wylie: 'sha',  desc: 'Voiceless alveolo-palatal fricative' },
+  { char: 'ས', name: 'Sa',   wylie: 'sa',   desc: 'Voiceless alveolar fricative' },
+  { char: 'ཧ', name: 'Ha',   wylie: 'ha',   desc: 'Voiceless glottal fricative' },
+  { char: 'ཨ', name: 'A',    wylie: 'a',    desc: 'Vowel carrier / base letter' },
+];
+
+const STROKE_COLORS = [
+  '#6366F1', // Indigo
+  '#8B5CF6', // Violet
+  '#EC4899', // Pink
+  '#F43F5E', // Rose
+  '#F97316', // Orange
+  '#EAB308', // Yellow
+  '#22C55E', // Green
+  '#14B8A6', // Teal
+  '#0EA5E9', // Sky
+  '#3B82F6', // Blue
+];
+
+/* ═════════════════════════════════════════════════════════════
    CONFIGURATION
-═══════════════════════════════════════════════════════ */
+════════════════════════════════════════════════════════════ */
 const CONFIG = {
-  SIMPLIFY_EPSILON:      0.008,  // Douglas-Peucker tolerance (normalized 0-1)
-  MIN_PT_DISTANCE:       0.015,  // Minimum point spacing (normalized 0-1)
-  CANVAS_SIZE:           1000,   // Reference size for export metadata only
-  RAW_MIN_DISTANCE:      8,      // Min px between raw captured points
-  RAW_MIN_DISTANCE_INIT: 4,      // Min px for first few points
+  SIMPLIFY_EPSILON: 0.008,
+  MIN_PT_DISTANCE: 8,
+  MIN_PT_DISTANCE_INIT: 4,
+  REFERENCE_SIZE: 1000,
+  STORAGE_KEY: 'tibetan_strokes_v3_pro'
 };
 
-/* ═══════════════════════════════════════════════════════
-   GEOMETRY
-═══════════════════════════════════════════════════════ */
-function dist(p1, p2) {
-  const dx = p2.x - p1.x, dy = p2.y - p1.y;
-  return Math.sqrt(dx * dx + dy * dy);
+/* ═════════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════════ */
+let savedData = {};
+let currentLetterIndex = 0;
+let strokes = [];
+let currentPoints = [];
+let isDrawing = false;
+let lastPoint = null;
+
+// Load saved data
+try {
+  const stored = localStorage.getItem(CONFIG.STORAGE_KEY);
+  if (stored) savedData = JSON.parse(stored);
+} catch (e) {
+  console.error('Failed to load saved data:', e);
 }
 
-function perpDist(p, v, w) {
-  const l2 = (w.x - v.x) ** 2 + (w.y - v.y) ** 2;
-  if (l2 === 0) return dist(p, v);
+/* ═════════════════════════════════════════════════════════════
+   CANVAS SETUP
+════════════════════════════════════════════════════════════ */
+const canvasWrapper = document.getElementById('canvasWrapper');
+const bgCanvas = document.getElementById('bgCanvas');
+const drawCanvas = document.getElementById('drawCanvas');
+let bgCtx, drawCtx, canvasSize, devicePixelRatio;
+
+function setupCanvas() {
+  devicePixelRatio = window.devicePixelRatio || 1;
+  const rect = canvasWrapper.getBoundingClientRect();
+  canvasSize = rect.width;
+
+  [bgCanvas, drawCanvas].forEach(canvas => {
+    canvas.width = Math.round(canvasSize * devicePixelRatio);
+    canvas.height = Math.round(canvasSize * devicePixelRatio);
+    canvas.style.width = canvasSize + 'px';
+    canvas.style.height = canvasSize + 'px';
+  });
+
+  bgCtx = bgCanvas.getContext('2d');
+  drawCtx = drawCanvas.getContext('2d');
+  bgCtx.scale(devicePixelRatio, devicePixelRatio);
+  drawCtx.scale(devicePixelRatio, devicePixelRatio);
+}
+
+function getCanvasPoint(event) {
+  const rect = canvasWrapper.getBoundingClientRect();
+  const source = event.touches ? event.touches[0] : event;
+  return {
+    x: (source.clientX - rect.left) * (canvasSize / rect.width),
+    y: (source.clientY - rect.top) * (canvasSize / rect.height)
+  };
+}
+
+/* ═════════════════════════════════════════════════════════════
+   GEOMETRY & SIMPLIFICATION
+════════════════════════════════════════════════════════════ */
+function distance(p1, p2) {
+  return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+}
+
+function perpendicularDistance(point, lineStart, lineEnd) {
+  const dx = lineEnd.x - lineStart.x;
+  const dy = lineEnd.y - lineStart.y;
+  const len = dx * dx + dy * dy;
+  if (len === 0) return distance(point, lineStart);
   const t = Math.max(0, Math.min(1,
-    ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2));
-  return dist(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
+    ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / len));
+  const proj = { x: lineStart.x + t * dx, y: lineStart.y + t * dy };
+  return distance(point, proj);
 }
 
 // Douglas-Peucker simplification
-function simplify(pts, eps) {
-  if (pts.length <= 2) return pts;
-  let maxD = 0, maxI = 0;
-  const s = pts[0], e = pts[pts.length - 1];
-  for (let i = 1; i < pts.length - 1; i++) {
-    const d = perpDist(pts[i], s, e);
-    if (d > maxD) { maxD = d; maxI = i; }
+function simplifyPath(points, epsilon) {
+  if (points.length <= 2) return points;
+
+  let maxDistance = 0;
+  let maxIndex = 0;
+  const start = points[0];
+  const end = points[points.length - 1];
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const dist = perpendicularDistance(points[i], start, end);
+    if (dist > maxDistance) {
+      maxDistance = dist;
+      maxIndex = i;
+    }
   }
-  if (maxD > eps) {
-    const L = simplify(pts.slice(0, maxI + 1), eps);
-    const R = simplify(pts.slice(maxI), eps);
-    return L.slice(0, -1).concat(R);
+
+  if (maxDistance > epsilon) {
+    const left = simplifyPath(points.slice(0, maxIndex + 1), epsilon);
+    const right = simplifyPath(points.slice(maxIndex), epsilon);
+    return left.slice(0, -1).concat(right);
   }
-  return [s, e];
+
+  return [start, end];
 }
 
-// Adaptive min-distance filter
-function minDistFilter(pts, threshold) {
-  if (pts.length <= 1) return pts;
-  const out = [pts[0]];
-  let last = pts[0];
-  for (let i = 1; i < pts.length; i++) {
-    const th = out.length < 5 ? threshold * 0.5 : threshold;
-    if (dist(pts[i], last) >= th) { out.push(pts[i]); last = pts[i]; }
+// Minimum distance filter
+function filterByDistance(points, minDistance) {
+  if (points.length <= 1) return points;
+  const result = [points[0]];
+  let lastPoint = points[0];
+
+  for (let i = 1; i < points.length; i++) {
+    const adaptiveMin = result.length < 5 ? minDistance * 0.5 : minDistance;
+    if (distance(points[i], lastPoint) >= adaptiveMin) {
+      result.push(points[i]);
+      lastPoint = points[i];
+    }
   }
-  const tail = pts[pts.length - 1];
-  if (dist(out[out.length - 1], tail) > 0) out.push(tail);
-  return out;
+
+  // Always include the last point
+  const finalPoint = points[points.length - 1];
+  if (distance(result[result.length - 1], finalPoint) > 0) {
+    result.push(finalPoint);
+  }
+
+  return result;
 }
 
-// Full point-processing pipeline
-function processPoints(rawPts) {
-  const stats = { raw: rawPts.length, filtered: 0, simplified: 0 };
-  if (rawPts.length < 2) return { points: rawPts, stats };
-  let pts = minDistFilter(rawPts, CONFIG.RAW_MIN_DISTANCE);
-  stats.filtered = pts.length;
-  pts = simplify(pts, CONFIG.SIMPLIFY_EPSILON * CSIZE);
-  stats.simplified = pts.length;
-  return { points: pts, stats };
+function processStroke(rawPoints) {
+  const stats = { raw: rawPoints.length, filtered: 0, simplified: 0 };
+
+  if (rawPoints.length < 2) {
+    return { points: rawPoints, stats };
+  }
+
+  let points = filterByDistance(rawPoints, CONFIG.MIN_PT_DISTANCE);
+  stats.filtered = points.length;
+
+  points = simplifyPath(points, CONFIG.SIMPLIFY_EPSILON * canvasSize);
+  stats.simplified = points.length;
+
+  return { points, stats };
 }
 
-/* ═══════════════════════════════════════════════════════
-   NORMALIZE — stores coords EXACTLY as drawn (no rescaling)
-   Simply divides pixel coords by CSIZE to get 0..1 range.
-   On reload, multiply by CSIZE to restore pixel coords.
-═══════════════════════════════════════════════════════ */
-function normalize(rawStrokes) {
-  if (!rawStrokes.length) return { strokes: [], bounds: null };
+function normalizeStrokeData(strokeData) {
+  const round4 = v => Math.round(v * 10000) / 10000;
 
-  const r4 = v => Math.round(v * 10000) / 10000;
-
-  // Compute bounding box for metadata only — NOT used for scaling
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  rawStrokes.forEach(s => s.points.forEach(p => {
-    const nx = p.x / CSIZE, ny = p.y / CSIZE;
-    if (nx < minX) minX = nx; if (ny < minY) minY = ny;
-    if (nx > maxX) maxX = nx; if (ny > maxY) maxY = ny;
-  }));
+
+  strokeData.forEach(stroke => {
+    stroke.points.forEach(p => {
+      const nx = p.x / canvasSize;
+      const ny = p.y / canvasSize;
+      minX = Math.min(minX, nx);
+      minY = Math.min(minY, ny);
+      maxX = Math.max(maxX, nx);
+      maxY = Math.max(maxY, ny);
+    });
+  });
 
   return {
-    strokes: rawStrokes.map(s => ({
+    strokes: strokeData.map(s => ({
       type: 'path',
-      // Store exact position: just divide by canvas size
       points: s.points.map(p => ({
-        x: r4(p.x / CSIZE),
-        y: r4(p.y / CSIZE)
+        x: round4(p.x / canvasSize),
+        y: round4(p.y / canvasSize)
       }))
     })),
     bounds: {
-      minX: r4(minX), maxX: r4(maxX),
-      minY: r4(minY), maxY: r4(maxY)
+      minX: round4(minX),
+      minY: round4(minY),
+      maxX: round4(maxX),
+      maxY: round4(maxY)
     }
   };
 }
 
-/* ═══════════════════════════════════════════════════════
-   DATA
-═══════════════════════════════════════════════════════ */
-const ALPHABET = [
-  { char:'ཀ', name:'Ka',   desc:'1st consonant'  },
-  { char:'ཁ', name:'Kha',  desc:'2nd consonant'  },
-  { char:'ག', name:'Ga',   desc:'3rd consonant'  },
-  { char:'ང', name:'Nga',  desc:'4th consonant'  },
-  { char:'ཅ', name:'Ca',   desc:'5th consonant'  },
-  { char:'ཆ', name:'Cha',  desc:'6th consonant'  },
-  { char:'ཇ', name:'Ja',   desc:'7th consonant'  },
-  { char:'ཉ', name:'Nya',  desc:'8th consonant'  },
-  { char:'ཏ', name:'Ta',   desc:'9th consonant'  },
-  { char:'ཐ', name:'Tha',  desc:'10th consonant' },
-  { char:'ད', name:'Da',   desc:'11th consonant' },
-  { char:'ན', name:'Na',   desc:'12th consonant' },
-  { char:'པ', name:'Pa',   desc:'13th consonant' },
-  { char:'ཕ', name:'Pha',  desc:'14th consonant' },
-  { char:'བ', name:'Ba',   desc:'15th consonant' },
-  { char:'མ', name:'Ma',   desc:'16th consonant' },
-  { char:'ཙ', name:'Tsa',  desc:'17th consonant' },
-  { char:'ཚ', name:'Tsha', desc:'18th consonant' },
-  { char:'ཛ', name:'Dza',  desc:'19th consonant' },
-  { char:'ཝ', name:'Wa',   desc:'20th consonant' },
-  { char:'ཞ', name:'Zha',  desc:'21st consonant' },
-  { char:'ཟ', name:'Za',   desc:'22nd consonant' },
-  { char:'འ', name:"'A",   desc:'23rd consonant' },
-  { char:'ཡ', name:'Ya',   desc:'24th consonant' },
-  { char:'ར', name:'Ra',   desc:'25th consonant' },
-  { char:'ལ', name:'La',   desc:'26th consonant' },
-  { char:'ཤ', name:'Sha',  desc:'27th consonant' },
-  { char:'ས', name:'Sa',   desc:'28th consonant' },
-  { char:'ཧ', name:'Ha',   desc:'29th consonant' },
-  { char:'ཨ', name:'A',    desc:'30th consonant' },
-];
-
-const COLORS = [
-  '#3B5CE5','#E07B39','#16A34A','#DC2626',
-  '#9333EA','#0891B2','#CA8A04','#BE185D',
-];
-
-/* ═══════════════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════════════ */
-let savedData  = {};
-let currentIdx = 0;
-let strokes    = [];      // committed strokes [{color, points, rawPoints, stats}]
-let currentPts = [];      // in-progress raw points
-let isDrawing  = false;
-let lastPt     = null;
-
-// Use new storage key so old inflated data doesn't interfere
-const STORAGE_KEY = 'tib_paths_v4_exact';
-try {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) savedData = JSON.parse(raw);
-} catch(e) {}
-
-/* ═══════════════════════════════════════════════════════
-   CANVAS SETUP
-═══════════════════════════════════════════════════════ */
-const wrap       = document.getElementById('canvasWrap');
-const bgCanvas   = document.getElementById('bgCanvas');
-const drawCanvas = document.getElementById('drawCanvas');
-let bc, dc, CSIZE, DPR;
-
-function setupCanvas() {
-  DPR = window.devicePixelRatio || 1;
-  const rect = wrap.getBoundingClientRect();
-  CSIZE = rect.width;
-  [bgCanvas, drawCanvas].forEach(c => {
-    c.width  = Math.round(CSIZE * DPR);
-    c.height = Math.round(CSIZE * DPR);
-    c.style.width  = CSIZE + 'px';
-    c.style.height = CSIZE + 'px';
-  });
-  bc = bgCanvas.getContext('2d');
-  dc = drawCanvas.getContext('2d');
-  bc.scale(DPR, DPR);
-  dc.scale(DPR, DPR);
-}
-
-function getPos(e) {
-  const rect = wrap.getBoundingClientRect();
-  const src  = e.touches ? e.touches[0] : e;
-  return {
-    x: (src.clientX - rect.left) * (CSIZE / rect.width),
-    y: (src.clientY - rect.top)  * (CSIZE / rect.height),
-  };
-}
-
-/* ═══════════════════════════════════════════════════════
-   DRAWING
-═══════════════════════════════════════════════════════ */
-function drawBg() {
-  bc.clearRect(0, 0, CSIZE, CSIZE);
-  bc.strokeStyle = '#E9ECF6'; bc.lineWidth = 1; bc.setLineDash([3, 6]);
-  [CSIZE / 3, CSIZE * 2 / 3].forEach(v => {
-    bc.beginPath(); bc.moveTo(v, 0);     bc.lineTo(v, CSIZE);  bc.stroke();
-    bc.beginPath(); bc.moveTo(0, v);     bc.lineTo(CSIZE, v);  bc.stroke();
-  });
-  bc.setLineDash([]);
-  bc.strokeStyle = '#D1D8EE'; bc.lineWidth = 1;
-  bc.beginPath(); bc.moveTo(CSIZE / 2, 0);     bc.lineTo(CSIZE / 2, CSIZE); bc.stroke();
-  bc.beginPath(); bc.moveTo(0, CSIZE / 2);     bc.lineTo(CSIZE, CSIZE / 2); bc.stroke();
-  // Ghost letter
-  const fs = Math.round(CSIZE * 0.62);
-  bc.font = `700 ${fs}px "Noto Serif Tibetan", serif`;
-  bc.textAlign = 'center'; bc.textBaseline = 'alphabetic';
-  const char = ALPHABET[currentIdx].char;
-  const m = bc.measureText(char);
-  const th = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
-  bc.fillStyle = 'rgba(59,92,229,0.07)';
-  bc.fillText(char, CSIZE / 2, CSIZE / 2 + m.actualBoundingBoxAscent - th / 2);
-}
-
-function redraw() {
-  dc.clearRect(0, 0, CSIZE, CSIZE);
-  strokes.forEach((s, si) => {
-    if (s.points.length < 1) return;
-    drawLine(s.points, s.color, 1.0);
-    drawDots(s.points, s.color, si + 1, 1.0);
-  });
-  if (currentPts.length > 0) {
-    const col = COLORS[strokes.length % COLORS.length];
-    drawLine(currentPts, col, 0.55);
-    drawDots(currentPts, col, strokes.length + 1, 0.55);
-  }
-}
-
-function drawLine(pts, color, alpha) {
-  if (pts.length < 2) return;
-  dc.save(); dc.globalAlpha = alpha;
-  dc.beginPath(); dc.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length - 1; i++) {
-    const mx = (pts[i].x + pts[i + 1].x) / 2;
-    const my = (pts[i].y + pts[i + 1].y) / 2;
-    dc.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
-  }
-  dc.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-  dc.strokeStyle = color; dc.lineWidth = 3.5;
-  dc.lineCap = 'round'; dc.lineJoin = 'round';
-  dc.stroke(); dc.restore();
-}
-
-function drawDots(pts, color, num, alpha) {
-  dc.save(); dc.globalAlpha = alpha;
-  pts.forEach((p, pi) => {
-    const r = pi === 0 ? 6.5 : 3;
-    dc.beginPath(); dc.arc(p.x, p.y, r, 0, Math.PI * 2);
-    dc.fillStyle = color; dc.fill();
-    if (pi === 0) {
-      dc.font = `bold ${Math.round(CSIZE * 0.024)}px DM Sans, sans-serif`;
-      dc.fillStyle = 'white'; dc.textAlign = 'center'; dc.textBaseline = 'middle';
-      dc.fillText(num, p.x, p.y);
-    }
-  });
-  dc.restore();
-}
-
-/* ═══════════════════════════════════════════════════════
-   POINTER EVENTS
-═══════════════════════════════════════════════════════ */
-wrap.addEventListener('pointerdown', e => {
-  e.preventDefault();
-  wrap.setPointerCapture(e.pointerId);
-  isDrawing = true; lastPt = null;
-  const pos = getPos(e);
-  currentPts = [pos]; lastPt = pos;
-  redraw();
-});
-
-wrap.addEventListener('pointermove', e => {
-  if (!isDrawing) return;
-  e.preventDefault();
-  const pos = getPos(e);
-  const minD = currentPts.length < 5 ? CONFIG.RAW_MIN_DISTANCE_INIT : CONFIG.RAW_MIN_DISTANCE;
-  if (lastPt) {
-    const dx = pos.x - lastPt.x, dy = pos.y - lastPt.y;
-    if (Math.sqrt(dx * dx + dy * dy) < minD) return;
-  }
-  currentPts.push(pos); lastPt = pos;
-  redraw(); updateStrokeInfo();
-});
-
-wrap.addEventListener('pointerup',     () => { isDrawing = false; });
-wrap.addEventListener('pointercancel', () => { isDrawing = false; });
-
-/* ═══════════════════════════════════════════════════════
-   CONTROLS
-═══════════════════════════════════════════════════════ */
-function undoPoint() {
-  if (currentPts.length > 0) {
-    currentPts.pop();
-    lastPt = currentPts[currentPts.length - 1] || null;
-  } else if (strokes.length > 0) {
-    const last = strokes.pop();
-    currentPts = [...last.rawPoints]; currentPts.pop();
-    lastPt = currentPts[currentPts.length - 1] || null;
-    updateStrokesList();
-  }
-  redraw(); updateStrokeInfo();
-}
-
-function clearStroke() {
-  currentPts = []; lastPt = null;
-  redraw(); updateStrokeInfo();
-}
-
-function addStroke() {
-  if (currentPts.length < 2) { showToast('Draw at least 2 points first'); return; }
-  const { points, stats } = processPoints(currentPts);
-  const col = COLORS[strokes.length % COLORS.length];
-  strokes.push({ color: col, points, rawPoints: [...currentPts], stats });
-  currentPts = []; lastPt = null;
-  updateProcessingInfo(stats);
-  updateStrokesList(); updateStrokeInfo(); redraw();
-  showToast(`Stroke ${strokes.length} added (${stats.simplified} pts)`);
-}
-
-function doSave() {
-  const all = [...strokes];
-  if (currentPts.length >= 2) {
-    const { points, stats } = processPoints(currentPts);
-    all.push({ color: COLORS[all.length % COLORS.length], points, rawPoints: [...currentPts], stats });
-  }
-  if (all.length === 0) { showToast('No strokes to save'); return false; }
-  const { strokes: normStrokes, bounds } = normalize(all);
-  savedData[currentIdx] = { strokes: normStrokes, bounds, canvasSize: CONFIG.CANVAS_SIZE };
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData)); } catch(e) {}
-  return true;
-}
-
-/* ─────────────────────────────────────────────────────
-   restoreStrokes: multiply saved 0-1 coords back by
-   current CSIZE so playback is pixel-perfect at any size
-───────────────────────────────────────────────────── */
-function restoreStrokes(savedEntry) {
+function restoreStrokeData(savedEntry) {
   return savedEntry.strokes.map((s, i) => ({
-    color: COLORS[i % COLORS.length],
-    points: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
-    rawPoints: s.points.map(p => ({ x: p.x * CSIZE, y: p.y * CSIZE })),
+    color: STROKE_COLORS[i % STROKE_COLORS.length],
+    points: s.points.map(p => ({ x: p.x * canvasSize, y: p.y * canvasSize })),
+    rawPoints: s.points.map(p => ({ x: p.x * canvasSize, y: p.y * canvasSize })),
     stats: { raw: 0, filtered: s.points.length, simplified: s.points.length }
   }));
 }
 
-function saveLetter() {
-  if (!doSave()) return;
-  currentPts = []; lastPt = null;
-  strokes = savedData[currentIdx] ? restoreStrokes(savedData[currentIdx]) : [];
-  updateGrid(); updateHeader(); updateStrokesList(); redraw();
-  const btn = document.getElementById('saveBtn');
-  btn.textContent = 'Saved!';
-  btn.classList.add('saved-state');
-  setTimeout(() => {
-    btn.textContent = 'Save Letter & Continue';
-    btn.classList.remove('saved-state');
-  }, 1400);
-  showToast(`${ALPHABET[currentIdx].name} saved`);
-  const next = ALPHABET.findIndex((_, i) => i > currentIdx && !savedData[i]);
-  if (next !== -1) setTimeout(() => selectLetter(next), 600);
+/* ═════════════════════════════════════════════════════════════
+   DRAWING
+════════════════════════════════════════════════════════════ */
+function drawBackground() {
+  bgCtx.clearRect(0, 0, canvasSize, canvasSize);
+
+  // Draw grid lines
+  bgCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  bgCtx.lineWidth = 1;
+
+  // Outer border
+  bgCtx.strokeRect(2, 2, canvasSize - 4, canvasSize - 4);
+
+  // Third lines
+  bgCtx.setLineDash([4, 8]);
+  [canvasSize / 3, canvasSize * 2 / 3].forEach(pos => {
+    bgCtx.beginPath();
+    bgCtx.moveTo(pos, 0);
+    bgCtx.lineTo(pos, canvasSize);
+    bgCtx.stroke();
+
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, pos);
+    bgCtx.lineTo(canvasSize, pos);
+    bgCtx.stroke();
+  });
+  bgCtx.setLineDash([]);
+
+  // Center lines
+  bgCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  bgCtx.beginPath();
+  bgCtx.moveTo(canvasSize / 2, 0);
+  bgCtx.lineTo(canvasSize / 2, canvasSize);
+  bgCtx.stroke();
+
+  bgCtx.beginPath();
+  bgCtx.moveTo(0, canvasSize / 2);
+  bgCtx.lineTo(canvasSize, canvasSize / 2);
+  bgCtx.stroke();
+
+  // Ghost letter
+  const letter = TIBETAN_ALPHABET[currentLetterIndex].char;
+  const fontSize = Math.round(canvasSize * 0.55);
+  bgCtx.font = `600 ${fontSize}px "Noto Serif Tibetan", serif`;
+  bgCtx.textAlign = 'center';
+  bgCtx.textBaseline = 'alphabetic';
+
+  const metrics = bgCtx.measureText(letter);
+  const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+
+  // Draw ghost with better visibility
+  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.12)';
+  bgCtx.fillText(
+    letter,
+    canvasSize / 2 + 1,
+    canvasSize / 2 + metrics.actualBoundingBoxAscent - textHeight / 2 + 1
+  );
+
+  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+  bgCtx.fillText(
+    letter,
+    canvasSize / 2,
+    canvasSize / 2 + metrics.actualBoundingBoxAscent - textHeight / 2
+  );
 }
 
-/* ═══════════════════════════════════════════════════════
-   LETTER SELECTION
-═══════════════════════════════════════════════════════ */
-function selectLetter(idx) {
-  if (idx === currentIdx) return;
-  if ((strokes.length > 0 || currentPts.length >= 2) && !savedData[currentIdx]) {
-    if (confirm(`Save current work on ${ALPHABET[currentIdx].char} before switching?`)) doSave();
+function redrawCanvas() {
+  drawCtx.clearRect(0, 0, canvasSize, canvasSize);
+
+  // Draw saved strokes
+  strokes.forEach((stroke, index) => {
+    if (stroke.points.length < 1) return;
+    drawStrokePath(stroke.points, stroke.color, 1);
+    drawStrokePoints(stroke.points, stroke.color, index + 1);
+  });
+
+  // Draw current stroke
+  if (currentPoints.length > 0) {
+    const color = STROKE_COLORS[strokes.length % STROKE_COLORS.length];
+    drawStrokePath(currentPoints, color, 0.6);
+    drawStrokePoints(currentPoints, color, strokes.length + 1);
   }
-  currentIdx = idx;
-  strokes = savedData[idx] ? restoreStrokes(savedData[idx]) : [];
-  currentPts = []; lastPt = null;
-  updateGrid(); updateHeader(); updateStrokesList(); updateStrokeInfo();
-  drawBg(); redraw();
 }
 
-/* ═══════════════════════════════════════════════════════
+function drawStrokePath(points, color, alpha) {
+  if (points.length < 2) return;
+
+  const strokeWidth = Math.max(5, canvasSize * 0.014);
+
+  drawCtx.save();
+  drawCtx.globalAlpha = alpha;
+
+  // Shadow for brush effect
+  drawCtx.beginPath();
+  drawCtx.moveTo(points[0].x + 1, points[0].y + 1);
+  for (let i = 1; i < points.length - 1; i++) {
+    const mx = (points[i].x + points[i + 1].x) / 2;
+    const my = (points[i].y + points[i + 1].y) / 2;
+    drawCtx.quadraticCurveTo(points[i].x + 1, points[i].y + 1, mx + 1, my + 1);
+  }
+  drawCtx.lineTo(points[points.length - 1].x + 1, points[points.length - 1].y + 1);
+  drawCtx.strokeStyle = color;
+  drawCtx.globalAlpha = alpha * 0.3;
+  drawCtx.lineWidth = strokeWidth * 1.2;
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+  drawCtx.stroke();
+
+  // Main stroke
+  drawCtx.beginPath();
+  drawCtx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length - 1; i++) {
+    const mx = (points[i].x + points[i + 1].x) / 2;
+    const my = (points[i].y + points[i + 1].y) / 2;
+    drawCtx.quadraticCurveTo(points[i].x, points[i].y, mx, my);
+  }
+
+  drawCtx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+
+  drawCtx.strokeStyle = color;
+  drawCtx.globalAlpha = alpha;
+  drawCtx.lineWidth = strokeWidth;
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+  drawCtx.stroke();
+  drawCtx.restore();
+}
+
+function drawStrokePoints(points, color, strokeNumber) {
+  drawCtx.save();
+
+  points.forEach((point, index) => {
+    const radius = index === 0 ? 7 : 4;
+
+    drawCtx.beginPath();
+    drawCtx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    drawCtx.fillStyle = color;
+    drawCtx.fill();
+
+    if (index === 0) {
+      drawCtx.font = `bold ${Math.round(canvasSize * 0.025)}px Inter, sans-serif`;
+      drawCtx.fillStyle = '#FFFFFF';
+      drawCtx.textAlign = 'center';
+      drawCtx.textBaseline = 'middle';
+      drawCtx.fillText(strokeNumber.toString(), point.x, point.y);
+    }
+  });
+
+  drawCtx.restore();
+}
+
+/* ═════════════════════════════════════════════════════════════
+   POINTER EVENTS
+════════════════════════════════════════════════════════════ */
+canvasWrapper.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  canvasWrapper.setPointerCapture(e.pointerId);
+  isDrawing = true;
+  lastPoint = null;
+
+  const point = getCanvasPoint(e);
+  currentPoints = [point];
+  lastPoint = point;
+
+  redrawCanvas();
+});
+
+canvasWrapper.addEventListener('pointermove', (e) => {
+  if (!isDrawing) return;
+  e.preventDefault();
+
+  const point = getCanvasPoint(e);
+  const minDistance = currentPoints.length < 5
+    ? CONFIG.MIN_PT_DISTANCE_INIT
+    : CONFIG.MIN_PT_DISTANCE;
+
+  if (lastPoint) {
+    const dx = point.x - lastPoint.x;
+    const dy = point.y - lastPoint.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < minDistance) return;
+  }
+
+  currentPoints.push(point);
+  lastPoint = point;
+
+  redrawCanvas();
+  updateStrokeHint();
+});
+
+canvasWrapper.addEventListener('pointerup', () => {
+  isDrawing = false;
+});
+
+canvasWrapper.addEventListener('pointercancel', () => {
+  isDrawing = false;
+});
+
+/* ═════════════════════════════════════════════════════════════
+   CONTROLS
+════════════════════════════════════════════════════════════ */
+function undoPoint() {
+  if (currentPoints.length > 0) {
+    currentPoints.pop();
+    lastPoint = currentPoints[currentPoints.length - 1] || null;
+  } else if (strokes.length > 0) {
+    const lastStroke = strokes.pop();
+    currentPoints = [...lastStroke.rawPoints];
+    currentPoints.pop();
+    lastPoint = currentPoints[currentPoints.length - 1] || null;
+    updateStrokesList();
+  }
+
+  redrawCanvas();
+  updateStrokeHint();
+}
+
+function clearStroke() {
+  currentPoints = [];
+  lastPoint = null;
+  redrawCanvas();
+  updateStrokeHint();
+}
+
+function addStroke() {
+  if (currentPoints.length < 2) {
+    showToast('Draw at least 2 points first');
+    return;
+  }
+
+  const { points, stats } = processStroke(currentPoints);
+  const color = STROKE_COLORS[strokes.length % STROKE_COLORS.length];
+
+  strokes.push({
+    color,
+    points,
+    rawPoints: [...currentPoints],
+    stats
+  });
+
+  currentPoints = [];
+  lastPoint = null;
+
+  showProcessingInfo(stats);
+  updateStrokesList();
+  updateStrokeHint();
+  redrawCanvas();
+
+  showToast(`Stroke ${strokes.length} added (${stats.simplified} points)`);
+}
+
+function saveLetter() {
+  const allStrokes = [...strokes];
+
+  // Add current stroke if valid
+  if (currentPoints.length >= 2) {
+    const { points, stats } = processStroke(currentPoints);
+    allStrokes.push({
+      color: STROKE_COLORS[allStrokes.length % STROKE_COLORS.length],
+      points,
+      rawPoints: [...currentPoints],
+      stats
+    });
+  }
+
+  if (allStrokes.length === 0) {
+    showToast('No strokes to save');
+    return;
+  }
+
+  const { strokes: normalized, bounds } = normalizeStrokeData(allStrokes);
+
+  savedData[currentLetterIndex] = {
+    strokes: normalized,
+    bounds,
+    canvasSize: CONFIG.REFERENCE_SIZE
+  };
+
+  try {
+    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(savedData));
+  } catch (e) {
+    console.error('Failed to save:', e);
+  }
+
+  // Reset current state
+  currentPoints = [];
+  lastPoint = null;
+  strokes = restoreStrokeData(savedData[currentLetterIndex]);
+
+  updateLetterGrid();
+  updateLetterHeader();
+  updateStrokesList();
+  redrawCanvas();
+
+  // Animate save button
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.classList.add('saved');
+  saveBtn.querySelector('span:first-child').textContent = 'Saved!';
+  setTimeout(() => {
+    saveBtn.classList.remove('saved');
+    saveBtn.querySelector('span:first-child').textContent = 'Save Letter & Continue';
+  }, 1500);
+
+  showToast(`${TIBETAN_ALPHABET[currentLetterIndex].name} saved successfully`);
+
+  // Auto-advance to next unsaved letter
+  const nextIndex = TIBETAN_ALPHABET.findIndex((_, i) =>
+    i > currentLetterIndex && !savedData[i]
+  );
+
+  if (nextIndex !== -1) {
+    setTimeout(() => selectLetter(nextIndex), 800);
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   LETTER SELECTION
+════════════════════════════════════════════════════════════ */
+function selectLetter(index) {
+  if (index === currentLetterIndex) return;
+
+  // Prompt to save if unsaved work exists
+  const hasUnsavedWork = strokes.length > 0 || currentPoints.length >= 2;
+  if (hasUnsavedWork && !savedData[currentLetterIndex]) {
+    if (confirm(`Save your work on ${TIBETAN_ALPHABET[currentLetterIndex].name} before switching?`)) {
+      saveLetter();
+    }
+  }
+
+  currentLetterIndex = index;
+  strokes = savedData[index] ? restoreStrokeData(savedData[index]) : [];
+  currentPoints = [];
+  lastPoint = null;
+
+  updateLetterGrid();
+  updateLetterHeader();
+  updateStrokesList();
+  updateStrokeHint();
+
+  drawBackground();
+  redrawCanvas();
+}
+
+/* ═════════════════════════════════════════════════════════════
    UI UPDATES
-═══════════════════════════════════════════════════════ */
-function buildGrid() {
+════════════════════════════════════════════════════════════ */
+function buildLetterGrid() {
   const grid = document.getElementById('letterGrid');
   grid.innerHTML = '';
-  ALPHABET.forEach((l, i) => {
+
+  TIBETAN_ALPHABET.forEach((letter, index) => {
     const btn = document.createElement('button');
-    btn.className = 'lgrid-btn';
-    btn.textContent = l.char;
-    btn.title = `${l.name} · ${l.desc}`;
-    btn.id = `lb-${i}`;
-    btn.onclick = () => selectLetter(i);
+    btn.className = 'letter-btn';
+    btn.textContent = letter.char;
+    btn.title = `${letter.name} (${letter.wylie}) — ${letter.desc}`;
+    btn.id = `letter-${index}`;
+    btn.onclick = () => selectLetter(index);
     grid.appendChild(btn);
   });
-  updateGrid();
+
+  updateLetterGrid();
 }
 
-function updateGrid() {
-  ALPHABET.forEach((_, i) => {
-    const btn = document.getElementById(`lb-${i}`);
+function updateLetterGrid() {
+  TIBETAN_ALPHABET.forEach((_, index) => {
+    const btn = document.getElementById(`letter-${index}`);
     if (!btn) return;
-    btn.className = 'lgrid-btn'
-      + (i === currentIdx ? ' active' : '')
-      + (savedData[i]     ? ' saved'  : '');
+
+    let classes = 'letter-btn';
+    if (index === currentLetterIndex) classes += ' active';
+    if (savedData[index]) classes += ' saved';
+    btn.className = classes;
   });
+
+  // Update progress
+  const savedCount = Object.keys(savedData).length;
+  document.getElementById('progressText').textContent =
+    `${savedCount} / ${TIBETAN_ALPHABET.length} letters`;
 }
 
-function updateHeader() {
-  const l = ALPHABET[currentIdx];
-  document.getElementById('bigChar').textContent   = l.char;
-  document.getElementById('letterName').textContent  = l.name;
-  document.getElementById('letterDesc').textContent  = `${l.desc} · Tibetan alphabet`;
-  document.getElementById('strokesBadge').textContent =
+function updateLetterHeader() {
+  const letter = TIBETAN_ALPHABET[currentLetterIndex];
+
+  document.getElementById('letterDisplay').textContent = letter.char;
+  document.getElementById('letterName').textContent = `${letter.name} (${letter.wylie})`;
+  document.getElementById('letterDesc').textContent = letter.desc;
+  document.getElementById('strokesCount').textContent =
     `${strokes.length} stroke${strokes.length !== 1 ? 's' : ''}`;
-  document.getElementById('progressPill').textContent =
-    `${Object.keys(savedData).length} / ${ALPHABET.length}`;
 }
 
-function updateProcessingInfo(stats) {
-  const info = document.getElementById('processingInfo');
-  if (stats) {
-    info.style.display = 'flex';
-    document.getElementById('statRaw').textContent       = stats.raw;
-    document.getElementById('statFiltered').textContent  = stats.filtered;
-    document.getElementById('statSimplified').textContent = stats.simplified;
+function updateStrokeHint() {
+  const strokeNumber = strokes.length + 1;
+  const pointCount = currentPoints.length;
+
+  document.getElementById('strokeNumber').textContent = `Stroke ${strokeNumber}`;
+
+  const hint = document.getElementById('strokeHint');
+  if (pointCount === 0) {
+    hint.textContent = `Draw stroke ${strokeNumber} on the canvas`;
   } else {
-    info.style.display = 'none';
+    hint.textContent = `${pointCount} point${pointCount !== 1 ? 's' : ''} — Add Stroke to save`;
   }
+
+  document.getElementById('strokesCount').textContent =
+    `${strokes.length} stroke${strokes.length !== 1 ? 's' : ''}`;
 }
 
-function updateStrokeInfo() {
-  const si  = strokes.length;
-  const col = COLORS[si % COLORS.length];
-  const pts = currentPts.length;
-  const chip = document.getElementById('strokeChip');
-  chip.textContent = `Stroke ${si + 1}`;
-  chip.style.background = col;
-  document.getElementById('strokeHint').textContent =
-    pts === 0
-      ? `Draw stroke ${si + 1} on the canvas above`
-      : `${pts} point${pts !== 1 ? 's' : ''} — press Add Stroke to commit`;
-  document.getElementById('strokesBadge').textContent =
-    `${si} stroke${si !== 1 ? 's' : ''}`;
+function showProcessingInfo(stats) {
+  const info = document.getElementById('processingInfo');
+  info.classList.add('visible');
+  document.getElementById('statRaw').textContent = stats.raw;
+  document.getElementById('statFiltered').textContent = stats.filtered;
+  document.getElementById('statSimplified').textContent = stats.simplified;
 }
 
 function updateStrokesList() {
-  const panel = document.getElementById('strokesPanel');
+  const list = document.getElementById('strokesList');
   const empty = document.getElementById('emptyStrokes');
+
   if (strokes.length === 0) {
-    panel.innerHTML = '';
-    panel.appendChild(empty);
-    empty.style.display = 'block';
+    list.innerHTML = '<div class="empty-strokes-mini">No strokes yet</div>';
     return;
   }
-  empty.style.display = 'none';
-  panel.innerHTML = strokes.map((s, i) => `
-    <div class="stroke-row">
-      <div class="stroke-dot" style="background:${s.color}"></div>
-      Stroke ${i + 1}
-      <span class="stroke-pts">${s.points.length} pts</span>
-      <button class="stroke-del" onclick="deleteStroke(${i})">&#215;</button>
+
+  list.innerHTML = strokes.map((stroke, index) => `
+    <div class="mini-stroke-item">
+      <div class="mini-stroke-color" style="background: ${stroke.color}"></div>
+      <span class="mini-stroke-info">Stroke ${index + 1}</span>
+      <button class="mini-stroke-del" onclick="deleteStroke(${index})">✕</button>
     </div>
-  `).join('') + `<div id="emptyStrokes" style="display:none"></div>`;
-  updateStrokeInfo();
+  `).join('');
+
+  updateStrokeHint();
 }
 
-function deleteStroke(idx) {
-  strokes.splice(idx, 1);
-  strokes = strokes.map((s, i) => ({ ...s, color: COLORS[i % COLORS.length] }));
-  updateStrokesList(); redraw(); showToast('Stroke removed');
+function deleteStroke(index) {
+  strokes.splice(index, 1);
+  strokes = strokes.map((s, i) => ({
+    ...s,
+    color: STROKE_COLORS[i % STROKE_COLORS.length]
+  }));
+
+  updateStrokesList();
+  redrawCanvas();
+  showToast('Stroke removed');
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ═════════════════════════════════════════════════════════════
    EXPORT
-═══════════════════════════════════════════════════════ */
+════════════════════════════════════════════════════════════ */
 function buildExportData() {
-  const out = {
-    version: '2.0',
-    coordinateSystem: 'normalized-0-1-exact',
-    note: 'Coordinates are exact (x/canvasSize, y/canvasSize). No rescaling applied.',
-    canvasSize: CONFIG.CANVAS_SIZE,
+  const data = {
+    version: '3.0',
+    format: 'tibetan-strokes',
+    coordinateSystem: 'normalized-0-1',
+    canvasSize: CONFIG.REFERENCE_SIZE,
+    generated: new Date().toISOString(),
     letters: {}
   };
-  ALPHABET.forEach((l, i) => {
-    if (savedData[i]) {
-      out.letters[l.char] = {
-        name: l.name, index: i + 1,
-        strokes: savedData[i].strokes,
-        boundingBox: savedData[i].bounds
+
+  TIBETAN_ALPHABET.forEach((letter, index) => {
+    if (savedData[index]) {
+      data.letters[letter.char] = {
+        name: letter.name,
+        wylie: letter.wylie,
+        index: index + 1,
+        strokes: savedData[index].strokes,
+        bounds: savedData[index].bounds
       };
     }
   });
-  return out;
+
+  return data;
 }
 
-function toggleExport() {
-  const panel = document.getElementById('exportPanel');
-  if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
-  if ((strokes.length > 0 || currentPts.length >= 2) && !savedData[currentIdx]) doSave();
+function openExport() {
+  // Save current work first
+  if ((strokes.length > 0 || currentPoints.length >= 2) && !savedData[currentLetterIndex]) {
+    saveLetter();
+  }
+
   const data = buildExportData();
-  const keys = Object.keys(data.letters);
-  if (keys.length === 0) { showToast('Save some letters first'); return; }
+  const letterKeys = Object.keys(data.letters);
+
+  if (letterKeys.length === 0) {
+    showToast('Save some letters first');
+    return;
+  }
+
   const json = JSON.stringify(data, null, 2);
-  document.getElementById('outputBox').value = json;
-  let totalSt = 0, totalPts = 0;
-  Object.values(data.letters).forEach(l => {
-    totalSt += l.strokes.length;
-    totalPts += l.strokes.reduce((a, s) => a + s.points.length, 0);
+  document.getElementById('exportText').value = json;
+
+  // Calculate stats
+  let totalStrokes = 0;
+  let totalPoints = 0;
+
+  Object.values(data.letters).forEach(letter => {
+    totalStrokes += letter.strokes.length;
+    totalPoints += letter.strokes.reduce((sum, s) => sum + s.points.length, 0);
   });
-  document.getElementById('exportStats').innerHTML =
-    `<div class="export-stat">Format: <span>v2.0 exact</span></div>
-     <div class="export-stat">Letters: <span>${keys.length}</span></div>
-     <div class="export-stat">Strokes: <span>${totalSt}</span></div>
-     <div class="export-stat">Points: <span>${totalPts}</span></div>
-     <div class="export-stat">Size: <span>~${Math.round(json.length / 1024 * 10) / 10} KB</span></div>`;
-  panel.style.display = 'block';
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  document.getElementById('exportStats').innerHTML = `
+    <div class="export-stat">Letters: <span>${letterKeys.length}</span></div>
+    <div class="export-stat">Strokes: <span>${totalStrokes}</span></div>
+    <div class="export-stat">Points: <span>${totalPoints}</span></div>
+    <div class="export-stat">Size: <span>~${Math.round(json.length / 1024)} KB</span></div>
+  `;
+
+  document.getElementById('exportPanel').classList.add('open');
+}
+
+function closeExport() {
+  document.getElementById('exportPanel').classList.remove('open');
 }
 
 function copyJSON() {
-  const txt = document.getElementById('outputBox').value;
-  if (!txt) { showToast('Nothing to copy'); return; }
-  navigator.clipboard.writeText(txt)
-    .then(() => showToast('JSON copied to clipboard'))
-    .catch(() => { document.getElementById('outputBox').select(); document.execCommand('copy'); showToast('Copied'); });
+  const text = document.getElementById('exportText').value;
+  if (!text) {
+    showToast('Nothing to copy');
+    return;
+  }
+
+  navigator.clipboard.writeText(text)
+    .then(() => showToast('Copied to clipboard'))
+    .catch(() => {
+      document.getElementById('exportText').select();
+      document.execCommand('copy');
+      showToast('Copied');
+    });
 }
 
 function downloadJSON() {
-  const txt = document.getElementById('outputBox').value;
-  if (!txt) { showToast('Nothing to download'); return; }
+  const text = document.getElementById('exportText').value;
+  if (!text) {
+    showToast('Nothing to download');
+    return;
+  }
+
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
-  a.download = 'tibetan_strokes_v2_exact.json';
-  a.click(); showToast('Downloading…');
+  a.href = url;
+  a.download = `tibetan-strokes-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast('Downloaded');
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ═════════════════════════════════════════════════════════════
    TOAST
-═══════════════════════════════════════════════════════ */
-let _toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+════════════════════════════════════════════════════════════ */
+let toastTimer;
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2000);
 }
 
-/* ═══════════════════════════════════════════════════════
-   RESIZE
-═══════════════════════════════════════════════════════ */
-let _resizeTimer;
+/* ═════════════════════════════════════════════════════════════
+   RESIZE HANDLER
+════════════════════════════════════════════════════════════ */
+let resizeTimer;
 window.addEventListener('resize', () => {
-  clearTimeout(_resizeTimer);
-  _resizeTimer = setTimeout(() => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
     setupCanvas();
-    drawBg();
-    // Re-scale restored strokes to new canvas size
-    if (savedData[currentIdx]) {
-      strokes = restoreStrokes(savedData[currentIdx]);
+    drawBackground();
+
+    if (savedData[currentLetterIndex]) {
+      strokes = restoreStrokeData(savedData[currentLetterIndex]);
     }
-    redraw();
-  }, 120);
+
+    redrawCanvas();
+  }, 150);
 });
 
-/* ═══════════════════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════════════════ */
-buildGrid();
-updateHeader();
-
+/* ═════════════════════════════════════════════════════════════
+   INITIALIZATION
+════════════════════════════════════════════════════════════ */
 document.fonts.ready.then(() => {
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    setupCanvas(); drawBg();
-    if (savedData[0]) {
-      strokes = restoreStrokes(savedData[0]);
-      updateStrokesList();
-      redraw();
-    }
-    updateStrokeInfo();
-  }));
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setupCanvas();
+      buildLetterGrid();
+      updateLetterHeader();
+
+      drawBackground();
+
+      if (savedData[0]) {
+        strokes = restoreStrokeData(savedData[0]);
+        updateStrokesList();
+        redrawCanvas();
+      }
+
+      updateStrokeHint();
+    });
+  });
+});
+
+// Close export panel on escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeExport();
+  }
 });
 </script>
 </body>
