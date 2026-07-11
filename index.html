@@ -1216,14 +1216,14 @@ function drawBackground() {
   const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
 
   // Draw ghost with better visibility
-  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.12)';
+  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.30)';
   bgCtx.fillText(
     letter,
     canvasSize / 2 + 1,
     canvasSize / 2 + metrics.actualBoundingBoxAscent - textHeight / 2 + 1
   );
 
-  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.38)';
   bgCtx.fillText(
     letter,
     canvasSize / 2,
