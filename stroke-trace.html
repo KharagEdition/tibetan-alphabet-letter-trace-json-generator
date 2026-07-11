@@ -1042,8 +1042,10 @@ function drawBackground(char) {
   bgCtx.lineTo(canvasSize, canvasSize / 2);
   bgCtx.stroke();
 
-  // Ghost letter - more visible for easier tracing
-  const fontSize = Math.round(canvasSize * 0.52);
+  // Ghost letter - more visible for easier tracing.
+  // MUST match the recorder (index.html) font size ratio (0.55) so strokes
+  // recorded there land exactly on this ghost.
+  const fontSize = Math.round(canvasSize * 0.55);
   bgCtx.font = `600 ${fontSize}px "Noto Serif Tibetan", serif`;
   bgCtx.textAlign = 'center';
   bgCtx.textBaseline = 'alphabetic';
@@ -1065,6 +1067,30 @@ function drawBackground(char) {
     canvasSize / 2,
     canvasSize / 2 + metrics.actualBoundingBoxAscent - textHeight / 2
   );
+}
+
+/* Confine everything drawn on `ctx` to the ink of the current letter's
+   glyph (same font/size/position as the ghost), so traced strokes can
+   never overflow the letterform — mirrors the mobile app's outline clip. */
+function maskInkToGlyph(ctx) {
+  const letter = lettersData[currentLetterIndex];
+  if (!letter) return;
+
+  const fontSize = Math.round(canvasSize * 0.55);
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.font = `600 ${fontSize}px "Noto Serif Tibetan", serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  const metrics = ctx.measureText(letter.char);
+  const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+  ctx.fillStyle = '#000';
+  ctx.fillText(
+    letter.char,
+    canvasSize / 2,
+    canvasSize / 2 + metrics.actualBoundingBoxAscent - textHeight / 2
+  );
+  ctx.restore();
 }
 
 function drawCompletedStrokes() {
@@ -1120,6 +1146,8 @@ function drawCompletedStrokes() {
 
     doneCtx.restore();
   });
+
+  maskInkToGlyph(doneCtx);
 }
 
 function drawLiveStroke() {
@@ -1168,13 +1196,17 @@ function drawLiveStroke() {
   liveCtx.lineTo(canvasPath[canvasPath.length - 1].x, canvasPath[canvasPath.length - 1].y);
   liveCtx.stroke();
 
-  // Start dot (slightly larger)
+  liveCtx.restore();
+
+  // Ink stays inside the letterform; the tip dot is drawn after (UI cue,
+  // allowed to sit on top of the mask).
+  maskInkToGlyph(liveCtx);
+
+  const tip = canvasPath[canvasPath.length - 1];
   liveCtx.beginPath();
-  liveCtx.arc(canvasPath[0].x, canvasPath[0].y, baseWidth / 2, 0, Math.PI * 2);
+  liveCtx.arc(tip.x, tip.y, baseWidth / 2, 0, Math.PI * 2);
   liveCtx.fillStyle = '#FFFFFF';
   liveCtx.fill();
-
-  liveCtx.restore();
 }
 
 function getPartialPath(points, targetArc) {
