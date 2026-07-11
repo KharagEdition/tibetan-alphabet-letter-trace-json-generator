@@ -1053,15 +1053,17 @@ function drawBackground(char) {
   const metrics = bgCtx.measureText(char);
   const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
 
-  // Draw ghost with slight shadow for better visibility
-  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.12)';
+  // Draw ghost with slight shadow for better visibility. Alpha must be
+  // high enough that the letterform clearly reads on the dark theme —
+  // the learner has to SEE the letter they are filling in.
+  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.30)';
   bgCtx.fillText(
     char,
     canvasSize / 2 + 1,
     canvasSize / 2 + metrics.actualBoundingBoxAscent - textHeight / 2 + 1
   );
 
-  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+  bgCtx.fillStyle = 'rgba(99, 102, 241, 0.38)';
   bgCtx.fillText(
     char,
     canvasSize / 2,
@@ -1266,23 +1268,31 @@ function drawGuide() {
   guideCtx.stroke();
   guideCtx.restore();
 
-  // Waypoints
+  // Keep the fat guide band inside the letterform, like the ink.
+  maskInkToGlyph(guideCtx);
+
+  // Waypoints. Only the START of the stroke gets a numbered badge (the
+  // stroke number, matching the mobile app); interior waypoints are small
+  // unnumbered dots — numbering every recorded point buries the letter
+  // under badges.
   waypoints.forEach((wp, index) => {
     const pt = canvasPath[Math.min(wp.index, canvasPath.length - 1)];
     const reached = wp.arc <= currentProgress + 3;
     const isNext = !reached && (index === 0 || waypoints[index - 1].arc <= currentProgress + 3);
+    const isStart = index === 0;
+    const r = isStart ? dotRadius : dotRadius * 0.45;
 
     // Glow for next waypoint
     if (isNext) {
       guideCtx.beginPath();
-      guideCtx.arc(pt.x, pt.y, dotRadius + 8, 0, Math.PI * 2);
+      guideCtx.arc(pt.x, pt.y, r + 8, 0, Math.PI * 2);
       guideCtx.fillStyle = 'rgba(99, 102, 241, 0.15)';
       guideCtx.fill();
     }
 
     // Dot
     guideCtx.beginPath();
-    guideCtx.arc(pt.x, pt.y, dotRadius, 0, Math.PI * 2);
+    guideCtx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
 
     if (reached) {
       guideCtx.fillStyle = '#22C55E';
@@ -1294,19 +1304,20 @@ function drawGuide() {
 
     guideCtx.fill();
 
-    // White ring
-    guideCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-    guideCtx.lineWidth = 2;
-    guideCtx.stroke();
+    if (isStart) {
+      // White ring + stroke number on the start badge only.
+      guideCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      guideCtx.lineWidth = 2;
+      guideCtx.stroke();
 
-    // Number
-    guideCtx.save();
-    guideCtx.font = `600 ${fontSize}px Inter, sans-serif`;
-    guideCtx.textAlign = 'center';
-    guideCtx.textBaseline = 'middle';
-    guideCtx.fillStyle = '#FFFFFF';
-    guideCtx.fillText((index + 1).toString(), pt.x, pt.y + 0.5);
-    guideCtx.restore();
+      guideCtx.save();
+      guideCtx.font = `600 ${fontSize}px Inter, sans-serif`;
+      guideCtx.textAlign = 'center';
+      guideCtx.textBaseline = 'middle';
+      guideCtx.fillStyle = '#FFFFFF';
+      guideCtx.fillText((currentStrokeIndex + 1).toString(), pt.x, pt.y + 0.5);
+      guideCtx.restore();
+    }
   });
 
   // Cursor at current position
