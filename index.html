@@ -862,6 +862,10 @@ body {
                 <span class="btn-icon">✓</span>
                 <span>Save</span>
               </button>
+              <button class="btn btn-add" id="autoSnapBtn" style="grid-column: span 2;" onclick="toggleAutoSnap()">
+                <span class="btn-icon">✨</span>
+                <span id="autoSnapLabel">Auto-snap: ON</span>
+              </button>
             </div>
           </div>
 
@@ -913,6 +917,7 @@ body {
 
 <div class="toast" id="toast"></div>
 
+<script src="refine.js"></script>
 <script>
 /* ═════════════════════════════════════════════════════════════
    TIBETAN ALPHABET DATA (Accurate consonants)
@@ -984,7 +989,8 @@ const CONFIG = {
   MIN_PT_DISTANCE: 8,
   MIN_PT_DISTANCE_INIT: 4,
   REFERENCE_SIZE: 1000,
-  STORAGE_KEY: 'tibetan_strokes_v3_pro'
+  STORAGE_KEY: 'tibetan_strokes_v3_pro',
+  AUTO_REFINE: true
 };
 
 /* ═════════════════════════════════════════════════════════════
@@ -1108,7 +1114,7 @@ function filterByDistance(points, minDistance) {
 }
 
 function processStroke(rawPoints) {
-  const stats = { raw: rawPoints.length, filtered: 0, simplified: 0 };
+  const stats = { raw: rawPoints.length, filtered: 0, simplified: 0, refined: false };
 
   if (rawPoints.length < 2) {
     return { points: rawPoints, stats };
@@ -1120,7 +1126,65 @@ function processStroke(rawPoints) {
   points = simplifyPath(points, CONFIG.SIMPLIFY_EPSILON * canvasSize);
   stats.simplified = points.length;
 
+  // Auto-snap the sketch to the exact centerline of the ghost glyph:
+  // straight limbs become perfect straight lines, curved limbs smooth
+  // centered curves, and endpoints reach the limb tips.
+  if (CONFIG.AUTO_REFINE && typeof StrokeRefine !== 'undefined') {
+    const field = getGlyphField();
+    if (field) {
+      const res = StrokeRefine.refineStroke(rawPoints, field, {
+        scale: canvasSize / 1000,
+        iters: 24
+      });
+      if (res.stats.ok && res.points.length >= 2) {
+        points = res.points;
+        stats.simplified = points.length;
+        stats.refined = true;
+      }
+    }
+  }
+
   return { points, stats };
+}
+
+/* Distance field of the ghost glyph's ink, for stroke auto-snapping.
+   Rebuilt lazily whenever the letter or canvas size changes. */
+let glyphFieldCache = { key: null, field: null };
+function getGlyphField() {
+  const key = currentLetterIndex + ':' + Math.round(canvasSize);
+  if (glyphFieldCache.key === key) return glyphFieldCache.field;
+
+  let field = null;
+  try {
+    const size = Math.round(canvasSize);
+    const off = document.createElement('canvas');
+    off.width = size;
+    off.height = size;
+    const ctx = off.getContext('2d', { willReadFrequently: true });
+
+    // Must match drawBackground()'s ghost exactly (font, size, position).
+    const letter = TIBETAN_ALPHABET[currentLetterIndex].char;
+    const fontSize = Math.round(canvasSize * 0.55);
+    ctx.font = `600 ${fontSize}px "Noto Serif Tibetan", serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const metrics = ctx.measureText(letter);
+    const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+    ctx.fillStyle = '#000';
+    ctx.fillText(
+      letter,
+      canvasSize / 2,
+      canvasSize / 2 + metrics.actualBoundingBoxAscent - textHeight / 2
+    );
+
+    const img = ctx.getImageData(0, 0, size, size);
+    field = StrokeRefine.makeField(StrokeRefine.maskFromImageData(img, 40));
+  } catch (e) {
+    console.warn('Auto-snap unavailable:', e);
+  }
+
+  glyphFieldCache = { key, field };
+  return field;
 }
 
 function normalizeStrokeData(strokeData) {
@@ -1390,6 +1454,15 @@ function clearStroke() {
   updateStrokeHint();
 }
 
+function toggleAutoSnap() {
+  CONFIG.AUTO_REFINE = !CONFIG.AUTO_REFINE;
+  document.getElementById('autoSnapLabel').textContent =
+    'Auto-snap: ' + (CONFIG.AUTO_REFINE ? 'ON' : 'OFF');
+  showToast(CONFIG.AUTO_REFINE
+    ? 'Auto-snap ON — strokes snap to the letter centerline'
+    : 'Auto-snap OFF — strokes saved as drawn');
+}
+
 function addStroke() {
   if (currentPoints.length < 2) {
     showToast('Draw at least 2 points first');
@@ -1414,7 +1487,9 @@ function addStroke() {
   updateStrokeHint();
   redrawCanvas();
 
-  showToast(`Stroke ${strokes.length} added (${stats.simplified} points)`);
+  showToast(stats.refined
+    ? `Stroke ${strokes.length} added — snapped to centerline (${stats.simplified} pts)`
+    : `Stroke ${strokes.length} added (${stats.simplified} points)`);
 }
 
 function saveLetter() {
@@ -1462,11 +1537,12 @@ function saveLetter() {
 
   // Animate save button
   const saveBtn = document.getElementById('saveBtn');
+  const saveLabel = saveBtn.querySelector('span') || saveBtn;
   saveBtn.classList.add('saved');
-  saveBtn.querySelector('span:first-child').textContent = 'Saved!';
+  saveLabel.textContent = 'Saved!';
   setTimeout(() => {
     saveBtn.classList.remove('saved');
-    saveBtn.querySelector('span:first-child').textContent = 'Save Letter & Continue';
+    saveLabel.textContent = 'Save & Continue →';
   }, 1500);
 
   showToast(`${TIBETAN_ALPHABET[currentLetterIndex].name} saved successfully`);
@@ -1575,10 +1651,15 @@ function updateStrokeHint() {
 
 function showProcessingInfo(stats) {
   const info = document.getElementById('processingInfo');
+  info.style.display = 'flex';
   info.classList.add('visible');
-  document.getElementById('statRaw').textContent = stats.raw;
-  document.getElementById('statFiltered').textContent = stats.filtered;
-  document.getElementById('statSimplified').textContent = stats.simplified;
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+  set('statRaw', stats.raw);
+  set('statFiltered', stats.filtered);
+  set('statSimplified', stats.simplified + (stats.refined ? ' ✨' : ''));
 }
 
 function updateStrokesList() {
@@ -1614,28 +1695,113 @@ function deleteStroke(index) {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   EXPORT
+   EXPORT — full exact geometry (app format)
+
+   The export is everything the tracer/app needs for pixel-perfect
+   fills: the glyph outline vectorized from the letter mask, the
+   recorded (auto-snapped) guide strokes, true limb widths, and
+   flat-seam fill regions whose union covers the whole letterform.
+   Loads directly into stroke-trace.html (exact mode) and the app.
 ════════════════════════════════════════════════════════════ */
+
+/* One letter's exact geometry, computed from the glyph mask at high
+   resolution. Space: 1000×1000, matching the recorder's normalized
+   0-1 coordinates × 1000. */
+function buildExactGeometry(char, savedEntry) {
+  const S = 1000;
+  const off = document.createElement('canvas');
+  off.width = S;
+  off.height = S;
+  const ctx = off.getContext('2d', { willReadFrequently: true });
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+
+  // The recorder's ghost is drawn at 0.55×canvas; recorded points live in
+  // that space (normalized 0-1). For export, scale the glyph up so its ink
+  // fills 90% of the viewBox — and map the points with the same transform.
+  const f0 = Math.round(S * 0.55);
+  ctx.font = `600 ${f0}px "Noto Serif Tibetan", serif`;
+  const m0 = ctx.measureText(char);
+  const inkW0 = m0.actualBoundingBoxLeft + m0.actualBoundingBoxRight;
+  const inkH0 = m0.actualBoundingBoxAscent + m0.actualBoundingBoxDescent;
+  const y0 = S / 2 + m0.actualBoundingBoxAscent - inkH0 / 2; // ghost baseline
+  const k = Math.min((S * 0.9) / Math.max(inkW0, 1), (S * 0.9) / Math.max(inkH0, 1));
+
+  const f1 = Math.round(f0 * k);
+  ctx.font = `600 ${f1}px "Noto Serif Tibetan", serif`;
+  const m1 = ctx.measureText(char);
+  const inkH1 = m1.actualBoundingBoxAscent + m1.actualBoundingBoxDescent;
+  const y1 = S / 2 + m1.actualBoundingBoxAscent - inkH1 / 2;
+  ctx.fillStyle = '#000';
+  ctx.fillText(char, S / 2, y1);
+
+  const toNew = p => ({
+    x: S / 2 + (p.x * S - S / 2) * k,
+    y: y1 + (p.y * S - y0) * k
+  });
+
+  const mask = StrokeRefine.maskFromImageData(ctx.getImageData(0, 0, S, S), 40);
+  const outline = StrokeRefine.contoursToPath(StrokeRefine.traceMaskContours(mask, 1.4));
+  const field = StrokeRefine.makeField(mask);
+  const round1 = v => Math.round(v * 10) / 10;
+
+  const refined = savedEntry.strokes.map(s => {
+    let pts = s.points.map(toNew);
+    // Re-refine at full export resolution: snaps to the 1000-res medial
+    // axis and applies the junction guard even to strokes recorded
+    // before that guard existed.
+    const res = StrokeRefine.refineStroke(pts, field, {});
+    if (res.stats.ok && res.points.length >= 2) pts = res.points;
+    const dense = StrokeRefine.resampleStep(pts, 8);
+    const ds = dense.map(p => field.dist(p.x, p.y)).filter(d => d > 0.5).sort((a, b) => a - b);
+    const width = round1(res.width || (ds.length ? 2 * ds[ds.length >> 1] : 60));
+    return { points: pts, width };
+  });
+  // Later strokes yield to earlier ones at junctions (stems must not
+  // poke into the head bar) — trim, then partition.
+  StrokeRefine.trimToOtherStrokes(refined, {});
+
+  const strokes = refined.map(s => ({
+    points: s.points.map(p => [round1(p.x), round1(p.y)]),
+    width: s.width
+  }));
+  StrokeRefine.buildRegions(mask, strokes).forEach((region, i) => {
+    strokes[i].region = region;
+  });
+
+  return { outline, strokes };
+}
+
 function buildExportData() {
   const data = {
-    version: '3.0',
-    format: 'tibetan-strokes',
-    coordinateSystem: 'normalized-0-1',
-    canvasSize: CONFIG.REFERENCE_SIZE,
+    version: 1,
+    format: 'tibetan-letters-exact',
+    viewBox: 1000,
     generated: new Date().toISOString(),
-    letters: {}
+    letters: []
   };
 
   TIBETAN_ALPHABET.forEach((letter, index) => {
-    if (savedData[index]) {
-      data.letters[letter.char] = {
-        name: letter.name,
-        wylie: letter.wylie,
-        index: index + 1,
-        strokes: savedData[index].strokes,
-        bounds: savedData[index].bounds
-      };
+    const entry = {
+      id: letter.wylie,
+      glyph: letter.char,
+      roman: letter.wylie,
+      order: index + 1,
+      available: false,
+      outline: null,
+      strokes: []
+    };
+    if (savedData[index] && typeof StrokeRefine !== 'undefined') {
+      try {
+        const geo = buildExactGeometry(letter.char, savedData[index]);
+        entry.outline = geo.outline;
+        entry.strokes = geo.strokes;
+        entry.available = true;
+      } catch (e) {
+        console.warn('Exact geometry failed for', letter.char, e);
+      }
     }
+    data.letters.push(entry);
   });
 
   return data;
@@ -1648,29 +1814,29 @@ function openExport() {
   }
 
   const data = buildExportData();
-  const letterKeys = Object.keys(data.letters);
+  const available = data.letters.filter(l => l.available);
 
-  if (letterKeys.length === 0) {
+  if (available.length === 0) {
     showToast('Save some letters first');
     return;
   }
 
-  const json = JSON.stringify(data, null, 2);
+  const json = JSON.stringify(data, null, 1);
   document.getElementById('exportText').value = json;
 
   // Calculate stats
   let totalStrokes = 0;
-  let totalPoints = 0;
+  let totalRegions = 0;
 
-  Object.values(data.letters).forEach(letter => {
+  available.forEach(letter => {
     totalStrokes += letter.strokes.length;
-    totalPoints += letter.strokes.reduce((sum, s) => sum + s.points.length, 0);
+    totalRegions += letter.strokes.filter(s => s.region).length;
   });
 
   document.getElementById('exportStats').innerHTML = `
-    <div class="export-stat">Letters: <span>${letterKeys.length}</span></div>
+    <div class="export-stat">Letters: <span>${available.length}</span></div>
     <div class="export-stat">Strokes: <span>${totalStrokes}</span></div>
-    <div class="export-stat">Points: <span>${totalPoints}</span></div>
+    <div class="export-stat">Fill regions: <span>${totalRegions}</span></div>
     <div class="export-stat">Size: <span>~${Math.round(json.length / 1024)} KB</span></div>
   `;
 
@@ -1751,9 +1917,11 @@ window.addEventListener('resize', () => {
 /* ═════════════════════════════════════════════════════════════
    INITIALIZATION
 ════════════════════════════════════════════════════════════ */
-document.fonts.ready.then(() => {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
+let appInitialized = false;
+function initApp() {
+      if (appInitialized) return;
+      appInitialized = true;
+
       setupCanvas();
       buildLetterGrid();
       updateLetterHeader();
@@ -1767,8 +1935,100 @@ document.fonts.ready.then(() => {
       }
 
       updateStrokeHint();
-    });
+
+      // QA hook: ?qa=1 injects a wobbly stroke across the ghost's head
+      // bar and commits it, so auto-snap can be verified headlessly.
+      if (new URLSearchParams(location.search).get('qa') === '1') {
+        const field = getGlyphField();
+        if (field) {
+          const { data, w, h } = field.mask;
+          let top = -1, bot = -1, left = w, right = 0;
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              if (!data[y * w + x]) continue;
+              if (top < 0) top = y;
+              bot = y;
+              if (x < left) left = x;
+              if (x > right) right = x;
+            }
+          }
+          const barY = top + (bot - top) * 0.055;
+          const x0 = left + (right - left) * 0.25;
+          const x1 = left + (right - left) * 0.72;
+          currentPoints = [];
+          for (let i = 0; i <= 24; i++) {
+            const t = i / 24;
+            currentPoints.push({
+              x: x0 + (x1 - x0) * t,
+              y: barY + Math.sin(t * Math.PI * 3) * canvasSize * 0.02 + t * canvasSize * 0.025
+            });
+          }
+          addStroke();
+
+          // Downstrokes: one vertical sketch through each limb hanging
+          // below the bar, each starting INSIDE the bar on purpose —
+          // auto-snap's junction guard must pull the guide starts back
+          // below the bar seam. Limbs are found by clustering columns
+          // that have ink well below the bar.
+          const rowCov = yy => {
+            let c = 0;
+            for (let x = left; x <= right; x++) if (data[yy * w + x]) c++;
+            return c;
+          };
+          const covBar = rowCov(Math.round(barY));
+          let barBot = Math.round(barY);
+          while (barBot < h - 1 && rowCov(barBot + 1) > covBar * 0.55) barBot++;
+          const deepAt = [];
+          for (let x = left; x <= right; x++) {
+            let deepest = -1;
+            for (let y = bot; y > barBot + 6; y--) {
+              if (data[y * w + x]) { deepest = y; break; }
+            }
+            deepAt.push(deepest);
+          }
+          const clusters = [];
+          let cs = -1;
+          for (let i = 0; i <= deepAt.length; i++) {
+            const on = i < deepAt.length && deepAt[i] > 0;
+            if (on && cs < 0) cs = i;
+            if (!on && cs >= 0) { clusters.push([cs, i - 1]); cs = -1; }
+          }
+          clusters.filter(c => c[1] - c[0] > 4).forEach(([a, b]) => {
+            const mid = Math.round((a + b) / 2);
+            const x = left + mid;
+            const yEnd = deepAt[mid];
+            if (yEnd - barY < canvasSize * 0.05) return;
+            currentPoints = [];
+            const n = 16;
+            for (let i = 0; i <= n; i++) {
+              const t = i / n;
+              currentPoints.push({ x: x + Math.sin(t * 7) * 2, y: barY + (yEnd - 4 - barY) * t });
+            }
+            addStroke();
+          });
+
+          // ...and with &qaexport=1, save + build the exact-geometry
+          // export and stash it in the DOM for headless extraction.
+          if (new URLSearchParams(location.search).get('qaexport') === '1') {
+            saveLetter();
+            const data = buildExportData();
+            const pre = document.createElement('pre');
+            pre.id = 'qaExportJson';
+            pre.style.display = 'none';
+            pre.textContent = JSON.stringify(data);
+            document.body.appendChild(pre);
+          }
+        }
+      }
+}
+
+document.fonts.ready.then(() => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(initApp);
   });
+  // rAF may never fire in headless DOM dumps or throttled background
+  // tabs — fall back to a timer (initApp runs once either way).
+  setTimeout(initApp, 600);
 });
 
 // Close export panel on escape
