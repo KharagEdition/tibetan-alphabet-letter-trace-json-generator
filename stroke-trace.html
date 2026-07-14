@@ -149,6 +149,7 @@
   <div class="hbtns">
     <button class="icon" id="btnHint"  title="Show me">👁</button>
     <button class="icon" id="btnReset" title="Start over">↺</button>
+    <button class="icon" id="btnLoad"  title="Load custom JSON">📂</button>
     <button class="icon" id="btnGrid"  title="All letters">▦</button>
   </div>
 </header>
@@ -182,6 +183,28 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="sheet" id="loadSheet">
+  <div class="sheet-card">
+    <h3>Load custom letter data</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">
+      Pick a <b>letters.json</b> file (from <code>generate-strokes.cjs</code> or the
+      recorder) or paste the JSON below. Custom data is remembered until you
+      switch back to the built-in letters.
+    </p>
+    <input type="file" id="jsonFile" accept=".json,application/json"
+           style="margin-bottom:10px;color:var(--muted);font-size:13px">
+    <textarea id="jsonPaste" placeholder='{"version":1,"viewBox":1000,"letters":[...]}'
+      style="width:100%;height:140px;background:var(--panel-2);border:1px solid var(--line);
+             border-radius:10px;color:var(--text);font-family:monospace;font-size:12px;
+             padding:10px;resize:vertical;margin-bottom:12px"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="primary" id="btnApplyJson">Load JSON</button>
+      <button id="btnBuiltin">Use built-in letters</button>
+      <button id="btnCloseLoad">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script src="letters.js?v=4"></script>
 <script>
 'use strict';
@@ -203,8 +226,69 @@
       must travel the stroke in order, in the right direction.
    ============================================================ */
 
-const VB = (window.LETTERS_DATA && LETTERS_DATA.viewBox) || 1000;
-const LETTERS = (window.LETTERS_DATA && LETTERS_DATA.letters || []).filter(L => L.strokes && L.strokes.length);
+const VB = 1000;   // the tracer always works in a 0–1000 box
+
+/* Accept several data shapes and normalize to
+   {letters:[{id, glyph, roman, outline?, strokes:[{points:[[x,y]…], radii?, width?}]}]}.
+   - v2 (generate-strokes.cjs): letters array, [x,y] points in 0–1000, outline path
+   - v1 (recorder):             letters object map, {x,y} points in 0–1, no outline
+   Letters without an outline trace against their own stroke corridors. */
+function normalizeDoc(doc) {
+  if (!doc || typeof doc !== 'object') throw new Error('not a JSON object');
+  const srcVB = doc.viewBox || (doc.coordinateSystem === 'normalized-0-1' ? 1 : 1000);
+  const k = VB / srcVB;
+  let list;
+  if (Array.isArray(doc.letters)) {
+    list = doc.letters;
+  } else if (doc.letters && typeof doc.letters === 'object') {
+    list = Object.entries(doc.letters).map(([glyph, L], i) => ({
+      id: (L.name || glyph).toLowerCase(),
+      glyph,
+      roman: L.name || glyph,
+      order: L.index != null ? L.index : i + 1,
+      outline: L.outline,
+      strokes: L.strokes
+    }));
+  } else throw new Error('no "letters" found');
+
+  const out = [];
+  for (const L of list) {
+    if (!L || !Array.isArray(L.strokes)) continue;
+    const strokes = [];
+    for (const s of L.strokes) {
+      const raw = s && s.points;
+      if (!Array.isArray(raw) || raw.length < 2) continue;
+      const points = raw.map(p =>
+        Array.isArray(p) ? [p[0] * k, p[1] * k] : [p.x * k, p.y * k]);
+      const stroke = { points };
+      if (Array.isArray(s.radii)) stroke.radii = s.radii.map(r => r * k);
+      stroke.width = (s.width ? s.width * k : 70);
+      strokes.push(stroke);
+    }
+    if (!strokes.length) continue;
+    out.push({
+      id: L.id || L.glyph || String(out.length),
+      glyph: L.glyph || L.id || '?',
+      roman: L.roman || L.name || L.id || '',
+      order: L.order != null ? L.order : out.length + 1,
+      outline: L.outline || null,
+      strokes
+    });
+  }
+  if (!out.length) throw new Error('no letters with usable strokes');
+  out.sort((a, b) => (a.order || 0) - (b.order || 0));
+  return out;
+}
+
+const BUILTIN = (() => {
+  try { return normalizeDoc(window.LETTERS_DATA); } catch (e) { return []; }
+})();
+let LETTERS = BUILTIN;
+let usingCustom = false;
+try {
+  const saved = localStorage.getItem('trace_custom_data');
+  if (saved) { LETTERS = normalizeDoc(JSON.parse(saved)); usingCustom = true; }
+} catch (e) { localStorage.removeItem('trace_custom_data'); }
 
 /* ---------- tuning (vb units = 1000-wide letter box) ---------- */
 const CFG = {
@@ -357,7 +441,7 @@ function evPos(e) {
 function loadLetter(i) {
   cur = (i + LETTERS.length) % LETTERS.length;
   letter = LETTERS[cur];
-  glyphPath = new Path2D(letter.outline);
+  glyphPath = letter.outline ? new Path2D(letter.outline) : null;
   strokes = letter.strokes.map(buildStroke);
   si = 0; progress = 0; finished = false;
   revealed = strokes.map(() => 0);
@@ -368,7 +452,8 @@ function loadLetter(i) {
   rctx.clearRect(0, 0, reveal.width, reveal.height);
   document.getElementById('hGlyph').textContent = letter.glyph;
   document.getElementById('hRoman').textContent = letter.roman || letter.id;
-  document.getElementById('footInfo').textContent = `${cur + 1} / ${LETTERS.length}`;
+  document.getElementById('footInfo').textContent =
+    `${cur + 1} / ${LETTERS.length}` + (usingCustom ? ' · custom' : '');
   document.getElementById('celebrate').classList.remove('open');
   buildStrokebar();
   buildGridSel();
@@ -412,8 +497,12 @@ function advanceReveal(k, to) {
 function redrawReveal() {
   rctx.clearRect(0, 0, reveal.width, reveal.height);
   if (finished) {
-    rctx.fillStyle = '#fff';
-    rctx.fillRect(0, 0, reveal.width, reveal.height);
+    if (glyphPath) {
+      rctx.fillStyle = '#fff';
+      rctx.fillRect(0, 0, reveal.width, reveal.height);
+    } else {
+      strokes.forEach(st => paintCorridor(rctx, st, 0, st.len));
+    }
     return;
   }
   strokes.forEach((st, k) => {
@@ -429,15 +518,30 @@ function render() {
   ctx.clearRect(0, 0, stage.width, stage.height);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
-  /* letter ghost */
-  ctx.fillStyle = getCss('--ghost');
-  ctx.fill(glyphPath);
+  /* letter ghost — glyph fill, or the stroke corridors when there is no outline */
+  if (glyphPath) {
+    ctx.fillStyle = getCss('--ghost');
+    ctx.fill(glyphPath);
+  } else {
+    ctx.save();
+    ctx.strokeStyle = getCss('--ghost');
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const st of strokes) {
+      for (let i = 4; i < st.pts.length + 3; i += 4) {
+        const a = st.pts[Math.min(st.pts.length - 1, i) - 4] || st.pts[0];
+        const b = st.pts[Math.min(st.pts.length - 1, i)];
+        ctx.lineWidth = Math.max(14, (a.r + b.r) * CFG.brushScale);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
 
   /* current stroke: corridor tint + dashed centerline + chevrons */
   if (!finished && strokes[si]) {
     const st = strokes[si];
     ctx.save();
-    ctx.clip(glyphPath);
+    if (glyphPath) ctx.clip(glyphPath);
     ctx.strokeStyle = 'rgba(79,141,253,.15)';
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (let i = 4; i < st.pts.length; i += 4) {
@@ -468,9 +572,10 @@ function render() {
     }
   }
 
-  /* revealed ink, clipped to the glyph — the zero-seam trick */
+  /* revealed ink, clipped to the glyph — the zero-seam trick.
+     (no outline → the brush corridor IS the letter, no clip needed) */
   ctx.save();
-  ctx.clip(glyphPath);
+  if (glyphPath) ctx.clip(glyphPath);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(makeInk(), 0, 0);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
@@ -651,8 +756,12 @@ function finishSnapTick(now) {
 function completeLetter() {
   finished = true;
   // flood the whole glyph — covers any sliver the corridors missed
-  rctx.fillStyle = '#fff';
-  rctx.fillRect(0, 0, reveal.width, reveal.height);
+  if (glyphPath) {
+    rctx.fillStyle = '#fff';
+    rctx.fillRect(0, 0, reveal.width, reveal.height);
+  } else {
+    strokes.forEach(st => paintCorridor(rctx, st, 0, st.len));
+  }
   sfx.letterDone();
   if (navigator.vibrate) navigator.vibrate([16, 60, 24]);
   doneSet.add(letter.id);
@@ -733,6 +842,44 @@ document.getElementById('btnHint').onclick = () => startDemo();
 document.getElementById('btnPrev').onclick = () => loadLetter(cur - 1);
 document.getElementById('btnNext').onclick = () => loadLetter(cur + 1);
 document.getElementById('btnNext2').onclick = () => loadLetter(cur + 1);
+
+/* ---- custom JSON loading ---- */
+const loadSheet = document.getElementById('loadSheet');
+document.getElementById('btnLoad').onclick = () => loadSheet.classList.add('open');
+document.getElementById('btnCloseLoad').onclick = () => loadSheet.classList.remove('open');
+loadSheet.addEventListener('click', e => {
+  if (e.target === loadSheet) loadSheet.classList.remove('open');
+});
+document.getElementById('jsonFile').onchange = e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  f.text().then(t => { document.getElementById('jsonPaste').value = t; })
+    .catch(() => toast('Could not read that file'));
+};
+document.getElementById('btnApplyJson').onclick = () => {
+  const txt = document.getElementById('jsonPaste').value.trim();
+  if (!txt) { toast('Choose a file or paste JSON first'); return; }
+  try {
+    const letters = normalizeDoc(JSON.parse(txt));
+    LETTERS = letters;
+    usingCustom = true;
+    try { localStorage.setItem('trace_custom_data', txt); }
+    catch (q) { toast('Loaded (too large to remember across reloads)'); }
+    loadSheet.classList.remove('open');
+    loadLetter(0);
+    toast(`Loaded ${letters.length} custom letter${letters.length > 1 ? 's' : ''}`);
+  } catch (err) {
+    toast('Invalid JSON: ' + err.message);
+  }
+};
+document.getElementById('btnBuiltin').onclick = () => {
+  localStorage.removeItem('trace_custom_data');
+  LETTERS = BUILTIN;
+  usingCustom = false;
+  loadSheet.classList.remove('open');
+  if (LETTERS.length) loadLetter(0);
+  toast('Built-in letters restored');
+};
 
 function toast(msg) {
   const t = document.getElementById('toast');
