@@ -68,6 +68,12 @@ chevrons, idle hint dot, off-path ring + haptic feedback, per-stroke progress
 bar, finish-snap animation, confetti + chime on completion, a "show me" demo
 mode, and per-letter progress saved in `localStorage`.
 
+**Custom data:** the 📂 button in the tracer loads your own JSON — pick a
+file or paste it. It accepts the v2 format below, and also the legacy
+recorder format (normalized 0–1 `{x,y}` points, no outlines; those letters
+trace against their stroke corridors instead of a glyph fill). Custom data is
+remembered across reloads until you press *Use built-in letters*.
+
 ## JSON format (v2)
 
 ```jsonc
