@@ -620,6 +620,48 @@ function medianRadius(pts, field) {
   return rs[rs.length >> 1] || 0;
 }
 
+/* ─────────────────── root stroke ends into neighbors ───────────────────
+   A body stroke should START on the head bar (the pen begins on the head
+   line and pulls down). When a stroke end stops short of another stroke's
+   corridor — a visible notch at the junction — extend it along its own
+   direction through the ink until it lands inside the neighbor. Genuine
+   letter tips are unaffected: if the extension exits the ink before
+   reaching a neighbor, it is discarded. */
+function rootStrokesIntoNeighbors(strokes, field) {
+  const dense = strokes.map(pts => SR.resampleStep(pts, 6));
+  const insideOther = (p, self) => {
+    for (let k = 0; k < dense.length; k++) {
+      if (k === self) continue;
+      for (const q of dense[k]) {
+        const r = Math.max(4, field.dist(q.x, q.y));
+        if (Math.hypot(p.x - q.x, p.y - q.y) < r * 0.9) return true;
+      }
+    }
+    return false;
+  };
+  return strokes.map((pts, si) => {
+    if (pts.length < 2) return pts;
+    let out = pts;
+    for (const atStart of [true, false]) {
+      const end = atStart ? out[0] : out[out.length - 1];
+      if (insideOther(end, si)) continue;             // already rooted
+      const dir = endTangent(out, atStart, 10);       // points inward
+      const ext = [];
+      let px = end.x, py = end.y, landed = false;
+      for (let step = 0; step < 30; step++) {
+        px -= dir.x * 4; py -= dir.y * 4;
+        if (field.dist(px, py) < 2.5) break;          // left the ink: real tip
+        ext.push({ x: px, y: py });
+        if (insideOther({ x: px, y: py }, si)) { landed = true; break; }
+      }
+      if (landed && ext.length) {
+        out = atStart ? ext.slice().reverse().concat(out) : out.concat(ext);
+      }
+    }
+    return out;
+  });
+}
+
 /* ─────────────────── ordering / orientation (Tibetan rules) ─────────────────── */
 
 function orientAndOrder(strokes, field, bbox) {
@@ -765,6 +807,7 @@ for (const L of doc.letters || []) {
   strokes = dropRedundantShort(strokes, field, mask);
 
   strokes = orientAndOrder(strokes, field, bboxEarly);
+  strokes = rootStrokesIntoNeighbors(strokes, field).map(pts => SR.resampleStep(pts, 14));
 
   const radii = strokes.map(pts => pts.map(p => round1(Math.max(4, field.dist(p.x, p.y)))));
   const cov = coverage(mask, strokes, radii);
