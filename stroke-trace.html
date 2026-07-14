@@ -2,2091 +2,761 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Tibetan Letter Tracer - Professional</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Noto+Serif+Tibetan:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tibetan Letter Tracing</title>
 <style>
-:root {
-  --bg-primary: #0A0A0B;
-  --bg-secondary: #141416;
-  --bg-tertiary: #1C1C1F;
-  --bg-elevated: #222226;
-  --border-subtle: #2A2A2E;
-  --border-default: #333336;
-  --border-strong: #3F3F44;
-
-  --text-primary: #FFFFFF;
-  --text-secondary: #A1A1AA;
-  --text-tertiary: #71717A;
-  --text-muted: #52525B;
-
-  --accent-primary: #6366F1;
-  --accent-hover: #818CF8;
-  --accent-subtle: rgba(99, 102, 241, 0.15);
-  --accent-glow: rgba(99, 102, 241, 0.4);
-
-  --success: #22C55E;
-  --success-subtle: rgba(34, 197, 94, 0.15);
-  --error: #EF4444;
-  --error-subtle: rgba(239, 68, 68, 0.15);
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-
-  --canvas-size: min(400px, calc(100vw - 32px));
-}
-
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  font-size: 16px;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  min-height: 100vh;
-  line-height: 1.5;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-}
-
-/* ── Header ── */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(10, 10, 11, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border-subtle);
-  padding: 12px 20px;
-}
-
-.header-content {
-  max-width: 1000px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brand-logo {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--accent-primary), #8B5CF6);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Noto Serif Tibetan', serif;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.brand-text h1 {
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.brand-text p {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  font-weight: 500;
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-icon {
-  width: 38px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-size: 0.9rem;
-}
-
-.btn-icon:hover {
-  background: var(--bg-elevated);
-  border-color: var(--border-default);
-  color: var(--text-primary);
-}
-
-/* ── Import Screen ── */
-.import-screen {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  max-width: 540px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.import-card {
-  width: 100%;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 32px;
-  box-shadow: var(--shadow-lg);
-}
-
-.import-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.import-header h2 {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.import-header p {
-  font-size: 0.9rem;
-  color: var(--text-tertiary);
-  line-height: 1.6;
-}
-
-.import-textarea {
-  width: 100%;
-  min-height: 180px;
-  padding: 16px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  color: var(--text-secondary);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  line-height: 1.6;
-  resize: vertical;
-  margin-bottom: 16px;
-}
-
-.import-textarea:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-subtle);
-}
-
-.import-error {
-  display: none;
-  padding: 12px 16px;
-  background: var(--error-subtle);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: var(--radius-md);
-  color: var(--error);
-  font-size: 0.85rem;
-  font-weight: 500;
-  margin-bottom: 16px;
-}
-
-.import-error.visible {
-  display: block;
-}
-
-.btn-primary {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, var(--accent-primary), #8B5CF6);
-  border: none;
-  border-radius: var(--radius-lg);
-  color: white;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: 'Inter', sans-serif;
-}
-
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-/* ── Practice Screen ── */
-.practice-screen {
-  display: none;
-  flex: 1;
-  flex-direction: column;
-  max-width: 1000px;
-  margin: 0 auto;
-  width: 100%;
-  padding: 12px 20px;
-  gap: 12px;
-}
-
-.practice-screen.visible {
-  display: flex;
-}
-
-/* ── Letter Strip ── */
-.letter-strip-container {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.letter-strip-container::-webkit-scrollbar {
-  display: none;
-}
-
-.letter-strip {
-  display: flex;
-  gap: 6px;
-  width: max-content;
-}
-
-.strip-btn {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  background: var(--bg-tertiary);
-  border: 1.5px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  font-family: 'Noto Serif Tibetan', serif;
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.strip-btn:hover {
-  border-color: var(--border-default);
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.strip-btn.active {
-  border-color: var(--accent-primary);
-  background: var(--accent-subtle);
-  color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-subtle);
-}
-
-.strip-btn.completed {
-  border-color: var(--success);
-  background: var(--success-subtle);
-  color: var(--success);
-}
-
-.strip-btn.completed::after {
-  content: '✓';
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 16px;
-  height: 16px;
-  background: var(--success);
-  border-radius: 50%;
-  border: 2px solid var(--bg-secondary);
-  font-size: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Inter', sans-serif;
-}
-
-/* ── Main Practice Area ── */
-.practice-main {
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  gap: 12px;
-}
-
-@media (max-width: 900px) {
-  .practice-main {
-    grid-template-columns: 1fr;
+  :root {
+    --bg: #0F1420;
+    --panel: #1A2130;
+    --panel-2: #222B3E;
+    --line: #2E3950;
+    --text: #EAF0FA;
+    --muted: #8B95AB;
+    --accent: #4F8DFD;
+    --ink: #3B82F6;
+    --good: #22C55E;
+    --warn: #F59E0B;
+    --bad: #EF4444;
+    --ghost: #2A3450;
+    --radius: 18px;
   }
-}
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100dvh;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
 
-/* ── Canvas Card ── */
-.canvas-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-}
+  header {
+    width: 100%; max-width: 720px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px 4px;
+  }
+  .title { display: flex; align-items: baseline; gap: 10px; }
+  .title .glyph { font-size: 34px; line-height: 1; }
+  .title .roman { font-size: 15px; color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .hbtns { display: flex; gap: 8px; }
+  button {
+    border: 1px solid var(--line); background: var(--panel);
+    color: var(--text); border-radius: 12px;
+    font-size: 14px; font-weight: 600; padding: 9px 13px;
+    cursor: pointer; transition: background .15s, transform .1s;
+    user-select: none;
+  }
+  button:active { transform: scale(.96); }
+  button.primary { background: var(--accent); border-color: transparent; }
+  button.icon { font-size: 17px; padding: 8px 11px; }
 
-.canvas-area {
-  padding: 12px;
-  display: flex;
-  justify-content: center;
-}
+  .stage-wrap {
+    position: relative;
+    flex: 1; width: 100%; max-width: 720px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px 12px;
+    min-height: 0;
+  }
+  #stage {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    touch-action: none;
+    display: block;
+    max-width: 100%; max-height: 100%;
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
 
-.canvas-wrapper {
-  position: relative;
-  width: var(--canvas-size);
-  height: var(--canvas-size);
-  background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-tertiary) 100%);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  touch-action: none;
-  cursor: crosshair;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
-}
+  .strokebar {
+    display: flex; gap: 8px; align-items: center; justify-content: center;
+    padding: 4px 0 2px; min-height: 26px;
+  }
+  .sdot {
+    width: 26px; height: 8px; border-radius: 4px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    transition: background .25s;
+  }
+  .sdot.done { background: var(--good); border-color: transparent; }
+  .sdot.now  { background: var(--accent); border-color: transparent; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: .5; } }
 
-.canvas-wrapper canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
+  footer {
+    width: 100%; max-width: 720px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 6px 16px 14px;
+  }
+  .nav-arrows { display: flex; gap: 8px; }
 
-.canvas-footer {
-  padding: 10px 16px;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-tertiary);
-}
+  /* letter picker sheet */
+  .sheet {
+    position: fixed; inset: 0; z-index: 30;
+    background: rgba(8,12,22,.72); backdrop-filter: blur(6px);
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  .sheet.open { display: flex; }
+  .sheet-card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 22px 22px 0 0;
+    width: 100%; max-width: 720px; max-height: 78dvh;
+    padding: 18px; overflow-y: auto;
+  }
+  .sheet-card h3 { font-size: 15px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
+  .lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 10px; }
+  .lcell {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px;
+    padding: 10px 4px 8px; text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .lcell:hover { border-color: var(--accent); }
+  .lcell.sel { border-color: var(--accent); background: #24304a; }
+  .lcell .g { font-size: 30px; line-height: 1.25; }
+  .lcell .r { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .lcell .done-mark { color: var(--good); font-size: 11px; font-weight: 700; }
 
-.hint-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-}
+  /* completion overlay */
+  .celebrate {
+    position: absolute; inset: 0; z-index: 20;
+    display: none; align-items: center; justify-content: center; flex-direction: column;
+    gap: 12px; border-radius: var(--radius);
+    background: rgba(10,15,26,.55); backdrop-filter: blur(3px);
+    animation: fadeIn .3s;
+  }
+  .celebrate.open { display: flex; }
+  .celebrate .big { font-size: 120px; line-height: 1.1; filter: drop-shadow(0 8px 30px rgba(79,141,253,.45)); animation: pop .5s cubic-bezier(.2,1.8,.4,1); }
+  .celebrate .msg { font-size: 20px; font-weight: 700; }
+  .celebrate .sub { font-size: 14px; color: var(--muted); }
+  @keyframes pop { 0% { transform: scale(.3); } 100% { transform: scale(1); } }
+  @keyframes fadeIn { from { opacity: 0; } }
 
-.hint-icon {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-primary);
-}
-
-.hint-box.active .hint-icon {
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.2); }
-}
-
-.hint-box.error .hint-icon {
-  background: var(--error);
-}
-
-.hint-box.done .hint-icon {
-  background: var(--success);
-}
-
-.hint-text {
-  flex: 1;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.hint-box.done .hint-text {
-  color: var(--success);
-  font-weight: 600;
-}
-
-/* ── Canvas Controls (Navigation below canvas) ── */
-.canvas-controls {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-tertiary);
-}
-
-.canvas-controls .btn-control {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: 'Inter', sans-serif;
-}
-
-.canvas-controls .btn-control:hover:not(:disabled) {
-  background: var(--bg-primary);
-  border-color: var(--border-default);
-  color: var(--text-primary);
-}
-
-.canvas-controls .btn-control:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.canvas-controls .btn-control.primary {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-  color: white;
-}
-
-.canvas-controls .btn-control.primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
-}
-
-.canvas-controls .btn-control.success {
-  background: var(--success);
-  border-color: var(--success);
-  color: white;
-}
-
-.canvas-controls .btn-control.success:hover:not(:disabled) {
-  background: #16A34A;
-  border-color: #16A34A;
-}
-
-.canvas-controls .btn-icon-large {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-/* ── Info Panel ── */
-.info-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.info-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-}
-
-.info-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.info-char {
-  width: 52px;
-  height: 52px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Noto Serif Tibetan', serif;
-  font-size: 1.8rem;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.info-details {
-  flex: 1;
-}
-
-.info-details h2 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: 2px;
-}
-
-.info-details p {
-  font-size: 0.8rem;
-  color: var(--text-tertiary);
-}
-
-.info-body {
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.progress-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
-}
-
-.progress-bar {
-  height: 6px;
-  background: var(--bg-elevated);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-primary), #8B5CF6);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.progress-fill.complete {
-  background: var(--success);
-}
-
-.progress-fill.error {
-  background: var(--error);
-}
-
-.strokes-dots {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.stroke-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  transition: all 0.2s ease;
-}
-
-.stroke-dot.pending {
-  background: var(--bg-elevated);
-  border-color: var(--border-subtle);
-}
-
-.stroke-dot.active {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 8px var(--accent-glow);
-}
-
-.stroke-dot.complete {
-  background: var(--success);
-  border-color: var(--success);
-}
-
-/* ── Completion Overlay ── */
-.completion-overlay {
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(10, 10, 11, 0.8);
-  backdrop-filter: blur(8px);
-  border-radius: var(--radius-lg);
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.completion-overlay.visible {
-  display: flex;
-}
-
-.completion-content {
-  text-align: center;
-  animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.8); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.completion-icon {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 16px;
-  background: linear-gradient(135deg, var(--success), #16A34A);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4);
-}
-
-.completion-title {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.completion-subtitle {
-  font-size: 0.9rem;
-  color: var(--text-tertiary);
-}
-
-/* ── Toast ── */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(100px);
-  padding: 12px 24px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  font-size: 0.85rem;
-  font-weight: 600;
-  z-index: 300;
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.toast.show {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
-}
+  .toast {
+    position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%);
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 40;
+  }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 
-<header class="header">
-  <div class="header-content">
-    <div class="header-brand">
-      <div class="brand-logo">ཀ</div>
-      <div class="brand-text">
-        <h1>Tibetan Letter Tracer</h1>
-        <p>Stroke-by-stroke practice</p>
-      </div>
-    </div>
-    <div class="header-actions">
-      <button class="btn-icon" onclick="showImport()" title="Load new data">⇪</button>
-    </div>
+<header>
+  <div class="title">
+    <div class="glyph" id="hGlyph">ཀ</div>
+    <div class="roman" id="hRoman">ka</div>
+  </div>
+  <div class="hbtns">
+    <button class="icon" id="btnHint"  title="Show me">👁</button>
+    <button class="icon" id="btnReset" title="Start over">↺</button>
+    <button class="icon" id="btnGrid"  title="All letters">▦</button>
   </div>
 </header>
 
-<!-- Import Screen -->
-<div class="import-screen" id="importScreen">
-  <div class="import-card">
-    <div class="import-header">
-      <h2>Load Stroke Data</h2>
-      <p>Paste the JSON data exported from the Tibetan Stroke Recorder to begin your practice session.</p>
-    </div>
-    <textarea class="import-textarea" id="importTextarea" placeholder='Paste JSON here... {"version": "3.0", "letters": {...}'></textarea>
-    <div class="import-error" id="importError"></div>
-    <button class="btn-primary" onclick="loadImportData()">
-      <span>Load Letters</span>
-      <span>→</span>
-    </button>
+<div class="stage-wrap">
+  <canvas id="stage"></canvas>
+  <div class="celebrate" id="celebrate">
+    <div class="big" id="cGlyph">ཀ</div>
+    <div class="msg">Perfect! ✨</div>
+    <div class="sub" id="cSub">ka</div>
+    <button class="primary" id="btnNext2">Next letter →</button>
   </div>
 </div>
 
-<!-- Practice Screen -->
-<div class="practice-screen" id="practiceScreen">
-  <div class="letter-strip-container">
-    <div class="letter-strip" id="letterStrip"></div>
+<div class="strokebar" id="strokebar"></div>
+
+<footer>
+  <div class="nav-arrows">
+    <button id="btnPrev">←</button>
+    <button id="btnNext">→</button>
   </div>
+  <div style="color:var(--muted);font-size:13px;font-weight:600" id="footInfo"></div>
+</footer>
 
-  <div class="practice-main">
-    <div class="canvas-card">
-      <div class="canvas-area">
-        <div class="canvas-wrapper" id="canvasWrapper">
-          <canvas id="bgCanvas"></canvas>
-          <canvas id="doneCanvas"></canvas>
-          <canvas id="liveCanvas"></canvas>
-          <canvas id="guideCanvas"></canvas>
-          <div class="completion-overlay" id="completionOverlay">
-            <div class="completion-content">
-              <div class="completion-icon">✓</div>
-              <div class="completion-title">Letter Complete!</div>
-              <div class="completion-subtitle">Great job — continue to the next letter</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="canvas-footer">
-        <div class="hint-box" id="hintBox">
-          <span class="hint-icon"></span>
-          <span class="hint-text" id="hintText">Follow the numbered waypoints to trace the stroke</span>
-        </div>
-      </div>
-
-      <div class="canvas-controls">
-        <button class="btn-control" id="btnPrev" onclick="previousLetter()">
-          <span class="btn-icon-large">←</span>
-          <span>Previous</span>
-        </button>
-        <button class="btn-control" id="btnRetry" onclick="retryLetter()">
-          <span class="btn-icon-large">↺</span>
-          <span>Retry</span>
-        </button>
-        <button class="btn-control primary" id="btnNext" onclick="nextLetter()">
-          <span class="btn-icon-large">→</span>
-          <span>Next</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="info-panel">
-      <div class="info-card">
-        <div class="info-header">
-          <div class="info-char" id="infoChar">ཀ</div>
-          <div class="info-details">
-            <h2 id="infoName">Ka</h2>
-            <p id="infoWylie">ka</p>
-          </div>
-        </div>
-        <div class="info-body">
-          <div class="progress-section">
-            <div class="progress-label">
-              <span id="strokeLabel">Stroke 1 of 4</span>
-              <span id="progressPercent">0%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-            </div>
-          </div>
-
-          <div class="strokes-dots" id="strokesDots"></div>
-        </div>
-      </div>
-    </div>
+<div class="sheet" id="sheet">
+  <div class="sheet-card">
+    <h3>Choose a letter</h3>
+    <div class="lgrid" id="lgrid"></div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<!-- Optional pre-baked letter data (app format, generated by
-     rangjong_mobile/tool/tracing/regen.sh). When present the tracer starts
-     directly in exact-geometry mode - no JSON pasting needed.
-     The ?v= query busts stale caches — bump it when the data changes. -->
-<script src="refine.js?v=3" onerror="void 0"></script>
-<script src="letters.js?v=3" onerror="void 0"></script>
+<script src="letters.js?v=4"></script>
 <script>
-/* ═════════════════════════════════════════════════════════════
-   CONFIGURATION
-════════════════════════════════════════════════════════════ */
-const CONFIG = {
-  SNAP_TOLERANCE: 0.08,        // Max distance from path (normalized)
-  COMPLETION_THRESHOLD: 0.94,  // Progress required to complete stroke
-  STROKE_WIDTH: 0.055,         // Stroke width (normalized) - thicker for brush effect
-  STROKE_WIDTH_VAR: 0.035,     // Variable stroke width for brush effect
-  GUIDE_DASH: [6, 10],
-  GUIDE_WIDTH: 0.012,
-  DOT_RADIUS: 0.022,
-  CURSOR_RADIUS: 0.016,
-  CORNER_ANGLE: Math.PI / 4.5, // Corner detection threshold
-  MIN_WAYPOINT_SPACING: 0.10,  // Min spacing between waypoints
+'use strict';
+/* ============================================================
+   Tibetan letter tracing — game-grade tracing engine.
+
+   The two ideas that make this robust:
+
+   1. INK = brush ∩ glyph. Revealed ink is a round-cap corridor
+      painted along the guide path, CLIPPED to the glyph outline.
+      The visible edges always come from the font geometry, so
+      there are no seams at stroke junctions and no gaps at
+      flared tips — ever.
+
+   2. MONOTONIC ARC-LENGTH PROGRESS. The finger's position is
+      matched to the guide path only inside a small window ahead
+      of current progress, with a per-event advance cap. You can
+      neither skip across the letter nor scrub backwards; you
+      must travel the stroke in order, in the right direction.
+   ============================================================ */
+
+const VB = (window.LETTERS_DATA && LETTERS_DATA.viewBox) || 1000;
+const LETTERS = (window.LETTERS_DATA && LETTERS_DATA.letters || []).filter(L => L.strokes && L.strokes.length);
+
+/* ---------- tuning (vb units = 1000-wide letter box) ---------- */
+const CFG = {
+  brushScale: 1.3,       // reveal brush radius = local ink radius × this
+  tolScale: 2.1,         // finger tolerance = local radius × this
+  tolMin: 42,            // ... but never tighter than this
+  startTolScale: 2.6,    // touch-down tolerance around stroke start / tip
+  aheadWindow: 90,       // how far ahead of progress we search
+  backWindow: 55,        // small backward window (jitter forgiveness)
+  advancePerMove: 2.6,   // max progress per event ≈ finger distance × this
+  advanceFloor: 14,      // ... plus this
+  endTolScale: 1.6,      // stroke counts as finished this close to the end
+  endTolMin: 34,
+  snapMs: 160,           // finish-snap animation
+  hintIdleMs: 3200,      // idle time before the hint dot starts
+  offPathMs: 420         // continuous off-path time before feedback
 };
 
-/* ═════════════════════════════════════════════════════════════
-   STATE
-════════════════════════════════════════════════════════════ */
-let lettersData = [];
-let currentLetterIndex = 0;
-let currentStrokeIndex = 0;
-let completedStrokes = [];     // Completed stroke paths for current letter
-let completedLetters = new Set();
+/* ---------- tiny helpers ---------- */
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
 
-// Canvas state
-let activeStrokePath = null;   // Current stroke being traced (normalized)
-let waypoints = [];            // Waypoints for current stroke
-let currentProgress = 0;       // Current tracing progress (0-1)
-let totalStrokeLength = 0;     // Total length of current stroke
-let isOffPath = false;
-let isPointerDown = false;
-let letterComplete = false;
-
-// Canvas elements
-let bgCtx, doneCtx, liveCtx, guideCtx;
-let canvasSize, dpr;
-
-/* App-format mode: letters carry exact glyph geometry (SVG outline +
-   per-stroke fill regions) produced by the converter pipeline. Rendering
-   then uses Path2D fills - the traced ink IS the letterform, pixel-exact,
-   with zero dependence on font rasterization. When only a raw recorder
-   export is loaded, we fall back to glyph-text masking. */
-let appMode = false;
-let viewBoxSize = 1000;
-
-const INK_COLOR = '#22C55E';
-const SILHOUETTE_FILL = '#333B4B';
-const SILHOUETTE_EDGE = 'rgba(255, 255, 255, 0.40)';
-
-// The letter box: in app mode the 1000-space glyph square maps to 86% of
-// the canvas, centered. In legacy mode strokes already live in 0-1 canvas
-// space (recorded over the 0.55 ghost), so the mapping is identity.
-function letterScale() { return appMode ? canvasSize * 0.86 : canvasSize; }
-function letterOffset() { return appMode ? canvasSize * 0.07 : 0; }
-
-/* Run drawing code in glyph space (0..viewBox, y-down): Path2D outlines
-   and regions can be filled directly inside `fn`. */
-function inGlyphSpace(ctx, fn) {
-  ctx.save();
-  ctx.translate(letterOffset(), letterOffset());
-  ctx.scale(letterScale() / viewBoxSize, letterScale() / viewBoxSize);
-  fn();
-  ctx.restore();
-}
-
-/* Smoothed polyline stroke in glyph space; pts are normalized 0-1. */
-function strokePolylineGlyph(ctx, pts, widthGlyph) {
-  if (!pts || pts.length < 2) return;
-  const P = pts.map(p => ({ x: p.x * viewBoxSize, y: p.y * viewBoxSize }));
-  ctx.strokeStyle = INK_COLOR;
-  ctx.lineWidth = widthGlyph;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(P[0].x, P[0].y);
-  for (let i = 1; i < P.length - 1; i++) {
-    const mx = (P[i].x + P[i + 1].x) / 2;
-    const my = (P[i].y + P[i + 1].y) / 2;
-    ctx.quadraticCurveTo(P[i].x, P[i].y, mx, my);
-  }
-  ctx.lineTo(P[P.length - 1].x, P[P.length - 1].y);
-  ctx.stroke();
-}
-
-/* ═════════════════════════════════════════════════════════════
-   GEOMETRY UTILITIES
-════════════════════════════════════════════════════════════ */
-function distance(p1, p2) {
-  return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
-}
-
-function pathLength(points) {
-  let len = 0;
-  for (let i = 1; i < points.length; i++) {
-    len += distance(points[i - 1], points[i]);
-  }
-  return len;
-}
-
-function pointOnPath(points, targetArc) {
-  let accumulated = 0;
-  for (let i = 0; i < points.length - 1; i++) {
-    const segmentLength = distance(points[i], points[i + 1]);
-    if (accumulated + segmentLength >= targetArc) {
-      const t = (targetArc - accumulated) / segmentLength;
-      return {
-        x: points[i].x + t * (points[i + 1].x - points[i].x),
-        y: points[i].y + t * (points[i + 1].y - points[i].y)
-      };
-    }
-    accumulated += segmentLength;
-  }
-  return points[points.length - 1];
-}
-
-function closestPointOnPath(points, point) {
-  let best = { dist: Infinity, arc: 0, point: points[0] };
-  let arcAccumulated = 0;
-
-  for (let i = 0; i < points.length - 1; i++) {
-    const a = points[i];
-    const b = points[i + 1];
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const len2 = dx * dx + dy * dy;
-
-    let t = 0;
-    if (len2 > 0) {
-      t = Math.max(0, Math.min(1,
-        ((point.x - a.x) * dx + (point.y - a.y) * dy) / len2
-      ));
-    }
-
-    const projected = { x: a.x + t * dx, y: a.y + t * dy };
-    const dist = distance(point, projected);
-
-    if (dist < best.dist) {
-      best = {
-        dist,
-        arc: arcAccumulated + t * Math.sqrt(len2),
-        point: projected
-      };
-    }
-
-    arcAccumulated += Math.sqrt(len2);
-  }
-
-  // Check last point
-  const lastDist = distance(point, points[points.length - 1]);
-  if (lastDist < best.dist) {
-    best = { dist: lastDist, arc: arcAccumulated, point: points[points.length - 1] };
-  }
-
-  return best;
-}
-
-function buildWaypoints(points) {
-  const totalLength = pathLength(points);
-  const minSpacing = totalLength * CONFIG.MIN_WAYPOINT_SPACING;
-  const result = [{ index: 0, arc: 0 }];
-  let lastArc = 0;
-  let accumulated = 0;
-
-  for (let i = 1; i < points.length - 1; i++) {
-    accumulated += distance(points[i - 1], points[i]);
-
-    if (accumulated - lastArc < minSpacing) continue;
-
-    // Corner detection
-    const prev = points[i - 1];
-    const curr = points[i];
-    const next = points[i + 1];
-
-    const v1 = { x: prev.x - curr.x, y: prev.y - curr.y };
-    const v2 = { x: next.x - curr.x, y: next.y - curr.y };
-
-    const cross = Math.abs(v1.x * v2.y - v1.y * v2.x);
-    const dot = v1.x * v2.x + v1.y * v2.y;
-    const angle = Math.atan2(cross, dot);
-
-    if (angle > CONFIG.CORNER_ANGLE) {
-      result.push({ index: i, arc: accumulated });
-      lastArc = accumulated;
+function buildStroke(raw) {
+  // dense resample (~4 vb units) + cumulative length + per-point radius
+  const src = raw.points.map((p, i) => ({
+    x: p[0], y: p[1],
+    r: raw.radii ? raw.radii[Math.min(i, raw.radii.length - 1)] : (raw.width || 60) / 2
+  }));
+  if (src.length === 1) src.push({ ...src[0], x: src[0].x + 1 });
+  const pts = [];
+  for (let i = 0; i < src.length - 1; i++) {
+    const a = src[i], b = src[i + 1];
+    const d = Math.hypot(b.x - a.x, b.y - a.y);
+    const n = Math.max(1, Math.round(d / 4));
+    for (let k = 0; k < n; k++) {
+      const t = k / n;
+      pts.push({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), r: lerp(a.r, b.r, t) });
     }
   }
-
-  result.push({ index: points.length - 1, arc: totalLength });
-  return result;
+  pts.push({ ...src[src.length - 1] });
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) {
+    cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  }
+  return { pts, cum, len: cum[cum.length - 1] };
 }
 
-/* ═════════════════════════════════════════════════════════════
-   CANVAS SETUP
-════════════════════════════════════════════════════════════ */
-function setupCanvas() {
-  const wrapper = document.getElementById('canvasWrapper');
-  dpr = window.devicePixelRatio || 1;
-  canvasSize = wrapper.getBoundingClientRect().width;
-
-  ['bgCanvas', 'doneCanvas', 'liveCanvas', 'guideCanvas'].forEach(id => {
-    const canvas = document.getElementById(id);
-    canvas.width = Math.round(canvasSize * dpr);
-    canvas.height = Math.round(canvasSize * dpr);
-    canvas.style.width = canvasSize + 'px';
-    canvas.style.height = canvasSize + 'px';
-  });
-
-  bgCtx = document.getElementById('bgCanvas').getContext('2d');
-  doneCtx = document.getElementById('doneCanvas').getContext('2d');
-  liveCtx = document.getElementById('liveCanvas').getContext('2d');
-  guideCtx = document.getElementById('guideCanvas').getContext('2d');
-
-  [bgCtx, doneCtx, liveCtx, guideCtx].forEach(ctx => {
-    ctx.scale(dpr, dpr);
-  });
-}
-
-function getCanvasPoint(event) {
-  const wrapper = document.getElementById('canvasWrapper');
-  const rect = wrapper.getBoundingClientRect();
-  const source = event.touches ? event.touches[0] : event;
+function pointAt(st, s) {
+  s = clamp(s, 0, st.len);
+  let lo = 0, hi = st.cum.length - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (st.cum[mid] < s) lo = mid + 1; else hi = mid; }
+  const i = Math.max(1, lo);
+  const t = (s - st.cum[i - 1]) / Math.max(1e-6, st.cum[i] - st.cum[i - 1]);
+  const a = st.pts[i - 1], b = st.pts[i];
   return {
-    x: (source.clientX - rect.left) * (canvasSize / rect.width),
-    y: (source.clientY - rect.top) * (canvasSize / rect.height)
+    x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), r: lerp(a.r, b.r, t),
+    dx: b.x - a.x, dy: b.y - a.y
   };
 }
 
-function normalizeToCanvas(point) {
-  const s = letterScale(), o = letterOffset();
-  return { x: o + point.x * s, y: o + point.y * s };
+/* nearest arc position to p inside [s0, s1]; returns {s, dist} */
+function locate(st, p, s0, s1) {
+  let best = { s: -1, dist: Infinity };
+  const n = st.pts.length;
+  for (let i = 1; i < n; i++) {
+    if (st.cum[i] < s0) continue;
+    if (st.cum[i - 1] > s1) break;
+    const a = st.pts[i - 1], b = st.pts[i];
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const L2 = vx * vx + vy * vy;
+    let t = L2 ? ((p.x - a.x) * vx + (p.y - a.y) * vy) / L2 : 0;
+    t = clamp(t, 0, 1);
+    const qx = a.x + t * vx, qy = a.y + t * vy;
+    const d = Math.hypot(p.x - qx, p.y - qy);
+    if (d < best.dist) best = { s: st.cum[i - 1] + t * Math.sqrt(L2), dist: d };
+  }
+  return best;
 }
 
-function canvasToNormalized(point) {
-  const s = letterScale(), o = letterOffset();
-  return { x: (point.x - o) / s, y: (point.y - o) / s };
+/* ============================ app state ============================ */
+const stage = document.getElementById('stage');
+const ctx = stage.getContext('2d');
+let DPR = 1, CSS = 640;              // css pixel size of the square canvas
+let cur = 0;                          // letter index
+let letter = null;                    // active letter data
+let glyphPath = null;                 // Path2D of the outline
+let strokes = [];                     // built strokes
+let si = 0;                           // current stroke index
+let progress = 0;                     // arc-length progress on current stroke
+let revealed = [];                    // per-stroke revealed length (for redraw)
+let tracing = false;
+let finished = false;
+let lastInput = performance.now();
+let offPathSince = 0;
+let hintT = 0;                        // hint dot animation param
+let snapAnim = null;                  // {from, start} finish animation
+let demoAnim = null;                  // full-letter demo animation
+let particles = [];
+let lastP = null;
+const doneSet = new Set(JSON.parse(localStorage.getItem('trace_done_v2') || '[]'));
+
+/* reveal layer (canvas resolution, persists across frames) */
+const reveal = document.createElement('canvas');
+const rctx = reveal.getContext('2d');
+
+/* ---------- audio (tiny synth, no assets) ---------- */
+let AC = null;
+function beep(freq, dur, type = 'sine', gain = .12, when = 0) {
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain, AC.currentTime + when);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + when + dur);
+    o.connect(g).connect(AC.destination);
+    o.start(AC.currentTime + when); o.stop(AC.currentTime + when + dur + .05);
+  } catch (e) { /* audio unavailable */ }
+}
+const sfx = {
+  strokeDone() { beep(660, .12, 'sine', .1); beep(880, .16, 'sine', .1, .09); },
+  letterDone() { [523, 659, 784, 1047].forEach((f, i) => beep(f, .18, 'sine', .1, i * .1)); },
+  off() { beep(160, .1, 'square', .04); }
+};
+
+/* ============================ setup ============================ */
+function fit() {
+  const wrap = stage.parentElement;
+  const w = wrap.clientWidth - 24, h = wrap.clientHeight - 12;
+  CSS = Math.max(280, Math.min(w, h));
+  DPR = Math.min(2.5, window.devicePixelRatio || 1);
+  stage.width = Math.round(CSS * DPR);
+  stage.height = Math.round(CSS * DPR);
+  stage.style.width = CSS + 'px';
+  stage.style.height = CSS + 'px';
+  reveal.width = stage.width;
+  reveal.height = stage.height;
+  if (letter) redrawReveal();
+}
+window.addEventListener('resize', fit);
+
+function evPos(e) {
+  const r = stage.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) / r.width * VB,
+    y: (e.clientY - r.top) / r.height * VB
+  };
 }
 
-/* ═════════════════════════════════════════════════════════════
-   RENDERING
-════════════════════════════════════════════════════════════ */
-function drawBackground(char) {
-  bgCtx.clearRect(0, 0, canvasSize, canvasSize);
+function loadLetter(i) {
+  cur = (i + LETTERS.length) % LETTERS.length;
+  letter = LETTERS[cur];
+  glyphPath = new Path2D(letter.outline);
+  strokes = letter.strokes.map(buildStroke);
+  si = 0; progress = 0; finished = false;
+  revealed = strokes.map(() => 0);
+  snapAnim = demoAnim = null;
+  particles = [];
+  lastP = null;
+  lastInput = performance.now();
+  rctx.clearRect(0, 0, reveal.width, reveal.height);
+  document.getElementById('hGlyph').textContent = letter.glyph;
+  document.getElementById('hRoman').textContent = letter.roman || letter.id;
+  document.getElementById('footInfo').textContent = `${cur + 1} / ${LETTERS.length}`;
+  document.getElementById('celebrate').classList.remove('open');
+  buildStrokebar();
+  buildGridSel();
+}
 
-  // Grid lines
-  bgCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-  bgCtx.lineWidth = 1;
-
-  // Outer frame
-  bgCtx.strokeRect(3, 3, canvasSize - 6, canvasSize - 6);
-
-  // Third lines (dashed)
-  bgCtx.setLineDash([4, 10]);
-  [canvasSize / 3, canvasSize * 2 / 3].forEach(pos => {
-    bgCtx.beginPath();
-    bgCtx.moveTo(pos, 0);
-    bgCtx.lineTo(pos, canvasSize);
-    bgCtx.stroke();
-
-    bgCtx.beginPath();
-    bgCtx.moveTo(0, pos);
-    bgCtx.lineTo(canvasSize, pos);
-    bgCtx.stroke();
+function buildStrokebar() {
+  const bar = document.getElementById('strokebar');
+  bar.innerHTML = '';
+  strokes.forEach((_, k) => {
+    const d = document.createElement('div');
+    d.className = 'sdot' + (k < si || finished ? ' done' : k === si ? ' now' : '');
+    bar.appendChild(d);
   });
-  bgCtx.setLineDash([]);
+}
 
-  // Center lines
-  bgCtx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-  bgCtx.beginPath();
-  bgCtx.moveTo(canvasSize / 2, 0);
-  bgCtx.lineTo(canvasSize / 2, canvasSize);
-  bgCtx.stroke();
+/* ============================ reveal painting ============================ */
+function paintCorridor(g, st, s0, s1) {
+  // stamp round dabs so the brush radius follows the local ink radius
+  const scale = (CSS * DPR) / VB;
+  const step = 3;
+  g.fillStyle = '#fff';
+  for (let s = Math.max(0, s0 - 2); s <= Math.min(st.len, s1); s += step) {
+    const q = pointAt(st, s);
+    g.beginPath();
+    g.arc(q.x * scale, q.y * scale, Math.max(6, q.r * CFG.brushScale) * scale, 0, 7);
+    g.fill();
+  }
+  const q = pointAt(st, clamp(s1, 0, st.len));
+  g.beginPath();
+  g.arc(q.x * scale, q.y * scale, Math.max(6, q.r * CFG.brushScale) * scale, 0, 7);
+  g.fill();
+}
 
-  bgCtx.beginPath();
-  bgCtx.moveTo(0, canvasSize / 2);
-  bgCtx.lineTo(canvasSize, canvasSize / 2);
-  bgCtx.stroke();
+function advanceReveal(k, to) {
+  const st = strokes[k];
+  if (to <= revealed[k]) return;
+  paintCorridor(rctx, st, revealed[k], to);
+  revealed[k] = to;
+}
 
-  // The letter silhouette: always a bold, fully-visible dark shape (like
-  // classic letter-tracing apps) — tracing FILLS this exact shape.
-  const letter = lettersData[currentLetterIndex];
-  if (appMode && letter && letter.outline) {
-    // Exact glyph geometry from letters.json.
-    inGlyphSpace(bgCtx, () => {
-      bgCtx.fillStyle = SILHOUETTE_FILL;
-      bgCtx.fill(letter.outline);
-      bgCtx.strokeStyle = SILHOUETTE_EDGE;
-      bgCtx.lineWidth = 3 * viewBoxSize / letterScale(); // ~3 screen px
-      bgCtx.stroke(letter.outline);
-    });
+function redrawReveal() {
+  rctx.clearRect(0, 0, reveal.width, reveal.height);
+  if (finished) {
+    rctx.fillStyle = '#fff';
+    rctx.fillRect(0, 0, reveal.width, reveal.height);
     return;
   }
-
-  // Legacy (raw recorder export): silhouette via the glyph text itself.
-  // MUST match the recorder (index.html) font size ratio (0.55) so strokes
-  // recorded there land exactly on this silhouette.
-  const fontSize = Math.round(canvasSize * 0.55);
-  bgCtx.font = `600 ${fontSize}px "Noto Serif Tibetan", serif`;
-  bgCtx.textAlign = 'center';
-  bgCtx.textBaseline = 'alphabetic';
-
-  const metrics = bgCtx.measureText(char);
-  const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-
-  bgCtx.fillStyle = SILHOUETTE_FILL;
-  bgCtx.fillText(
-    char,
-    canvasSize / 2,
-    canvasSize / 2 + metrics.actualBoundingBoxAscent - textHeight / 2
-  );
+  strokes.forEach((st, k) => {
+    if (revealed[k] > 0) paintCorridor(rctx, st, 0, revealed[k]);
+  });
 }
 
-/* Confine everything drawn on `ctx` to the ink of the current letter's
-   glyph (same font/size/position as the ghost), so traced strokes can
-   never overflow the letterform — mirrors the mobile app's outline clip. */
-function maskInkToGlyph(ctx) {
-  if (appMode) return; // exact mode clips to real geometry instead
-  const letter = lettersData[currentLetterIndex];
-  if (!letter) return;
+/* ============================ rendering ============================ */
+function render() {
+  const now = performance.now();
+  const scale = (CSS * DPR) / VB;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, stage.width, stage.height);
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
-  const fontSize = Math.round(canvasSize * 0.55);
+  /* letter ghost */
+  ctx.fillStyle = getCss('--ghost');
+  ctx.fill(glyphPath);
+
+  /* current stroke: corridor tint + dashed centerline + chevrons */
+  if (!finished && strokes[si]) {
+    const st = strokes[si];
+    ctx.save();
+    ctx.clip(glyphPath);
+    ctx.strokeStyle = 'rgba(79,141,253,.15)';
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let i = 4; i < st.pts.length; i += 4) {
+      const a = st.pts[i - 4], b = st.pts[i];
+      ctx.lineWidth = Math.max(14, (a.r + b.r) * CFG.brushScale);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(234,240,250,.5)';
+    ctx.lineWidth = 3.5; ctx.setLineDash([14, 12]);
+    ctx.lineDashOffset = -(now / 90) % 26;
+    ctx.beginPath();
+    st.pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(234,240,250,.55)';
+    for (let s = 70; s < st.len - 40; s += 130) {
+      const q = pointAt(st, s);
+      const a = Math.atan2(q.dy, q.dx);
+      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(a);
+      ctx.beginPath();
+      ctx.moveTo(7, 0); ctx.lineTo(-5, -8); ctx.lineTo(-2, 0); ctx.lineTo(-5, 8);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  /* revealed ink, clipped to the glyph — the zero-seam trick */
   ctx.save();
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.font = `600 ${fontSize}px "Noto Serif Tibetan", serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  const metrics = ctx.measureText(letter.char);
-  const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-  ctx.fillStyle = '#000';
-  ctx.fillText(
-    letter.char,
-    canvasSize / 2,
-    canvasSize / 2 + metrics.actualBoundingBoxAscent - textHeight / 2
-  );
+  ctx.clip(glyphPath);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(makeInk(), 0, 0);
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
   ctx.restore();
-}
 
-function drawCompletedStrokes() {
-  doneCtx.clearRect(0, 0, canvasSize, canvasSize);
-
-  const letter = lettersData[currentLetterIndex];
-
-  if (appMode && letter && letter.outline) {
-    // Exact mode: each finished stroke floods its own region of the
-    // letterform (Voronoi cell of the guide). Full coverage of the limb,
-    // zero spill — identical to the mobile engine.
-    inGlyphSpace(doneCtx, () => {
-      doneCtx.fillStyle = INK_COLOR;
-      if (letterComplete) {
-        doneCtx.fill(letter.outline);
-        return;
-      }
-      // Regions overshoot outward on purpose; clipping to the exact
-      // outline makes each filled stroke reach the true glyph boundary
-      // pixel-for-pixel (their union covers the whole letterform).
-      doneCtx.save();
-      doneCtx.clip(letter.outline);
-      for (let i = 0; i < completedStrokes.length; i++) {
-        const region = letter.regions && letter.regions[i];
-        if (region) {
-          doneCtx.fill(region, 'evenodd');
-        } else {
-          strokePolylineGlyph(doneCtx, letter.strokes[i],
-            (letter.widths && letter.widths[i] || 100) * 1.6);
-        }
-      }
-      doneCtx.restore();
-    });
-    return;
-  }
-
-  const baseWidth = canvasSize * CONFIG.STROKE_WIDTH;
-
-  completedStrokes.forEach(path => {
-    const canvasPath = path.map(p => normalizeToCanvas(p));
-
-    if (canvasPath.length < 2) return;
-
-    doneCtx.save();
-
-    // Shadow layer for depth
-    doneCtx.strokeStyle = 'rgba(34, 197, 94, 0.3)';
-    doneCtx.lineWidth = baseWidth * 1.3;
-    doneCtx.lineCap = 'round';
-    doneCtx.lineJoin = 'round';
-    doneCtx.beginPath();
-    doneCtx.moveTo(canvasPath[0].x + 2, canvasPath[0].y + 2);
-    for (let i = 1; i < canvasPath.length - 1; i++) {
-      const mx = (canvasPath[i].x + canvasPath[i + 1].x) / 2;
-      const my = (canvasPath[i].y + canvasPath[i + 1].y) / 2;
-      doneCtx.quadraticCurveTo(canvasPath[i].x + 2, canvasPath[i].y + 2, mx + 2, my + 2);
-    }
-    doneCtx.lineTo(canvasPath[canvasPath.length - 1].x + 2, canvasPath[canvasPath.length - 1].y + 2);
-    doneCtx.stroke();
-
-    // Main stroke
-    doneCtx.strokeStyle = '#22C55E';
-    doneCtx.lineWidth = baseWidth;
-    doneCtx.lineCap = 'round';
-    doneCtx.lineJoin = 'round';
-
-    doneCtx.beginPath();
-    doneCtx.moveTo(canvasPath[0].x, canvasPath[0].y);
-
-    for (let i = 1; i < canvasPath.length - 1; i++) {
-      const mx = (canvasPath[i].x + canvasPath[i + 1].x) / 2;
-      const my = (canvasPath[i].y + canvasPath[i + 1].y) / 2;
-      doneCtx.quadraticCurveTo(canvasPath[i].x, canvasPath[i].y, mx, my);
+  /* stroke start badge or live tip */
+  if (!finished && strokes[si]) {
+    const st = strokes[si];
+    if (progress < 24 && !snapAnim && !demoAnim) {
+      const p0 = st.pts[0];
+      const pulse = 1 + .08 * Math.sin(now / 260);
+      ctx.beginPath();
+      ctx.arc(p0.x, p0.y, 30 * pulse, 0, 7);
+      ctx.fillStyle = getCss('--accent');
+      ctx.shadowColor = 'rgba(79,141,253,.8)'; ctx.shadowBlur = 22;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#fff';
+      ctx.font = '700 34px -apple-system, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(si + 1), p0.x, p0.y + 2);
+    } else {
+      const q = pointAt(st, progress);
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, 15, 0, 7);
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = 'rgba(255,255,255,.9)'; ctx.shadowBlur = 16;
+      ctx.fill();
+      ctx.shadowBlur = 0;
     }
 
-    doneCtx.lineTo(canvasPath[canvasPath.length - 1].x, canvasPath[canvasPath.length - 1].y);
-    doneCtx.stroke();
-
-    // Start dot
-    doneCtx.beginPath();
-    doneCtx.arc(canvasPath[0].x, canvasPath[0].y, baseWidth / 2, 0, Math.PI * 2);
-    doneCtx.fillStyle = '#22C55E';
-    doneCtx.fill();
-
-    doneCtx.restore();
-  });
-
-  maskInkToGlyph(doneCtx);
-}
-
-function drawLiveStroke() {
-  liveCtx.clearRect(0, 0, canvasSize, canvasSize);
-
-  if (!activeStrokePath || currentProgress <= 0) return;
-
-  const currentLength = currentProgress;
-  const partialPath = getPartialPath(activeStrokePath, currentLength);
-  const canvasPath = partialPath.map(p => normalizeToCanvas(p));
-
-  if (canvasPath.length < 2) return;
-
-  const letterA = lettersData[currentLetterIndex];
-  if (appMode && letterA && letterA.outline) {
-    // Exact mode: oversized brush confined to this stroke's own region —
-    // ink reaches the limb edges but can never bleed into neighbours.
-    inGlyphSpace(liveCtx, () => {
-      const region = letterA.regions && letterA.regions[currentStrokeIndex];
-      liveCtx.save();
-      liveCtx.clip(letterA.outline);
-      if (region) liveCtx.clip(region, 'evenodd');
-      strokePolylineGlyph(liveCtx, partialPath,
-        (letterA.widths && letterA.widths[currentStrokeIndex] || 100) * 2.2);
-      liveCtx.restore();
-    });
-
-    // Tip dot (UI cue, above the clip).
-    const tipA = canvasPath[canvasPath.length - 1];
-    liveCtx.beginPath();
-    liveCtx.arc(tipA.x, tipA.y, canvasSize * 0.012, 0, Math.PI * 2);
-    liveCtx.fillStyle = '#FFFFFF';
-    liveCtx.fill();
-    return;
-  }
-
-  const baseWidth = canvasSize * CONFIG.STROKE_WIDTH;
-
-  // Draw main stroke with shadow for brush effect
-  liveCtx.save();
-
-  // Shadow layer for depth
-  liveCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-  liveCtx.lineWidth = baseWidth * 1.3;
-  liveCtx.lineCap = 'round';
-  liveCtx.lineJoin = 'round';
-  liveCtx.beginPath();
-  liveCtx.moveTo(canvasPath[0].x + 2, canvasPath[0].y + 2);
-  for (let i = 1; i < canvasPath.length - 1; i++) {
-    const mx = (canvasPath[i].x + canvasPath[i + 1].x) / 2;
-    const my = (canvasPath[i].y + canvasPath[i + 1].y) / 2;
-    liveCtx.quadraticCurveTo(canvasPath[i].x + 2, canvasPath[i].y + 2, mx + 2, my + 2);
-  }
-  liveCtx.lineTo(canvasPath[canvasPath.length - 1].x + 2, canvasPath[canvasPath.length - 1].y + 2);
-  liveCtx.stroke();
-
-  // Main stroke
-  liveCtx.strokeStyle = '#FFFFFF';
-  liveCtx.lineWidth = baseWidth;
-  liveCtx.beginPath();
-  liveCtx.moveTo(canvasPath[0].x, canvasPath[0].y);
-
-  for (let i = 1; i < canvasPath.length - 1; i++) {
-    const mx = (canvasPath[i].x + canvasPath[i + 1].x) / 2;
-    const my = (canvasPath[i].y + canvasPath[i + 1].y) / 2;
-    liveCtx.quadraticCurveTo(canvasPath[i].x, canvasPath[i].y, mx, my);
-  }
-
-  liveCtx.lineTo(canvasPath[canvasPath.length - 1].x, canvasPath[canvasPath.length - 1].y);
-  liveCtx.stroke();
-
-  liveCtx.restore();
-
-  // Ink stays inside the letterform; the tip dot is drawn after (UI cue,
-  // allowed to sit on top of the mask).
-  maskInkToGlyph(liveCtx);
-
-  const tip = canvasPath[canvasPath.length - 1];
-  liveCtx.beginPath();
-  liveCtx.arc(tip.x, tip.y, baseWidth / 2, 0, Math.PI * 2);
-  liveCtx.fillStyle = '#FFFFFF';
-  liveCtx.fill();
-}
-
-function getPartialPath(points, targetArc) {
-  if (targetArc <= 0) return [points[0]];
-
-  const result = [points[0]];
-  let accumulated = 0;
-
-  for (let i = 1; i < points.length; i++) {
-    const segmentLength = distance(points[i - 1], points[i]);
-
-    if (accumulated + segmentLength >= targetArc) {
-      const t = (targetArc - accumulated) / segmentLength;
-      result.push({
-        x: points[i - 1].x + t * (points[i].x - points[i - 1].x),
-        y: points[i - 1].y + t * (points[i].y - points[i - 1].y)
-      });
-      return result;
+    /* idle hint: glowing dot runs ahead along the path */
+    if (now - lastInput > CFG.hintIdleMs && !tracing && !snapAnim && !demoAnim) {
+      hintT = (hintT + 2.6) % (st.len - progress + 130);
+      const q = pointAt(st, clamp(progress + hintT, 0, st.len));
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, 13, 0, 7);
+      ctx.fillStyle = 'rgba(255,213,79,.95)';
+      ctx.shadowColor = 'rgba(255,213,79,.9)'; ctx.shadowBlur = 18;
+      ctx.fill();
+      ctx.shadowBlur = 0;
     }
 
-    result.push(points[i]);
-    accumulated += segmentLength;
-  }
-
-  return result;
-}
-
-function getRemainingPath(points, fromArc) {
-  if (fromArc <= 0) return points.slice();
-
-  const result = [];
-  let accumulated = 0;
-
-  for (let i = 1; i < points.length; i++) {
-    const segmentLength = distance(points[i - 1], points[i]);
-
-    if (result.length === 0 && accumulated + segmentLength >= fromArc) {
-      const t = segmentLength > 0 ? (fromArc - accumulated) / segmentLength : 0;
-      result.push({
-        x: points[i - 1].x + t * (points[i].x - points[i - 1].x),
-        y: points[i - 1].y + t * (points[i].y - points[i - 1].y)
-      });
+    /* off-path feedback ring at the current tip */
+    if (offPathSince && now - offPathSince > CFG.offPathMs) {
+      const q = pointAt(st, progress);
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, 34 + 6 * Math.sin(now / 110), 0, 7);
+      ctx.strokeStyle = 'rgba(239,68,68,.75)';
+      ctx.lineWidth = 5;
+      ctx.stroke();
     }
-    if (result.length > 0) result.push(points[i]);
-    accumulated += segmentLength;
   }
 
-  return result;
-}
-
-function drawGuide() {
-  guideCtx.clearRect(0, 0, canvasSize, canvasSize);
-
-  if (letterComplete || !activeStrokePath) return;
-
-  const canvasPath = activeStrokePath.map(p => normalizeToCanvas(p));
-  const dotRadius = canvasSize * CONFIG.DOT_RADIUS;
-  const cursorRadius = canvasSize * CONFIG.CURSOR_RADIUS;
-  const guideWidth = canvasSize * CONFIG.GUIDE_WIDTH;
-  const fontSize = Math.max(10, dotRadius * 0.85);
-
-  // Classic tracing-app guide: a thin dashed line along the REMAINING part
-  // of the stroke, an arrowhead at its end, and one numbered start badge.
-  // No bands, no waypoint dots — the silhouette shows what gets filled.
-  const remaining = getRemainingPath(activeStrokePath, currentProgress)
-    .map(p => normalizeToCanvas(p));
-
-  if (remaining.length >= 2) {
-    guideCtx.save();
-    guideCtx.setLineDash([canvasSize * 0.018, canvasSize * 0.016]);
-    guideCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-    guideCtx.lineWidth = Math.max(3, canvasSize * 0.006);
-    guideCtx.lineCap = 'round';
-    guideCtx.lineJoin = 'round';
-
-    guideCtx.beginPath();
-    guideCtx.moveTo(remaining[0].x, remaining[0].y);
-    for (let i = 1; i < remaining.length - 1; i++) {
-      const mx = (remaining[i].x + remaining[i + 1].x) / 2;
-      const my = (remaining[i].y + remaining[i + 1].y) / 2;
-      guideCtx.quadraticCurveTo(remaining[i].x, remaining[i].y, mx, my);
+  /* celebration particles */
+  if (particles.length) {
+    particles = particles.filter(p => (p.life -= .016) > 0);
+    for (const p of particles) {
+      p.x += p.vx; p.y += p.vy; p.vy += .5;
+      ctx.globalAlpha = Math.min(1, p.life * 2);
+      ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, 7); ctx.fill();
     }
-    guideCtx.lineTo(remaining[remaining.length - 1].x, remaining[remaining.length - 1].y);
-    guideCtx.stroke();
-    guideCtx.restore();
-
-    // Arrowhead at the stroke's end, pointing along the final segment.
-    const tip = remaining[remaining.length - 1];
-    let back = remaining[remaining.length - 2];
-    for (let i = remaining.length - 2; i >= 0; i--) {
-      if (distance(remaining[i], tip) > 2) { back = remaining[i]; break; }
-    }
-    const dx = tip.x - back.x, dy = tip.y - back.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const nx = dx / len, ny = dy / len;
-    const px = -ny, py = nx;
-    const ah = Math.max(10, canvasSize * 0.022);
-    guideCtx.beginPath();
-    guideCtx.moveTo(tip.x + nx * ah, tip.y + ny * ah);
-    guideCtx.lineTo(tip.x + px * ah * 0.55, tip.y + py * ah * 0.55);
-    guideCtx.lineTo(tip.x - px * ah * 0.55, tip.y - py * ah * 0.55);
-    guideCtx.closePath();
-    guideCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    guideCtx.fill();
+    ctx.globalAlpha = 1;
   }
-
-  // Numbered start badge, shown until the learner starts the stroke.
-  if (currentProgress <= 0) {
-    const startPt = canvasPath[0];
-    guideCtx.beginPath();
-    guideCtx.arc(startPt.x, startPt.y, dotRadius + 8, 0, Math.PI * 2);
-    guideCtx.fillStyle = 'rgba(99, 102, 241, 0.25)';
-    guideCtx.fill();
-
-    guideCtx.beginPath();
-    guideCtx.arc(startPt.x, startPt.y, dotRadius, 0, Math.PI * 2);
-    guideCtx.fillStyle = '#6366F1';
-    guideCtx.fill();
-    guideCtx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-    guideCtx.lineWidth = 2;
-    guideCtx.stroke();
-
-    guideCtx.save();
-    guideCtx.font = `600 ${fontSize}px Inter, sans-serif`;
-    guideCtx.textAlign = 'center';
-    guideCtx.textBaseline = 'middle';
-    guideCtx.fillStyle = '#FFFFFF';
-    guideCtx.fillText((currentStrokeIndex + 1).toString(), startPt.x, startPt.y + 0.5);
-    guideCtx.restore();
-  }
-
-  // Cursor at current position
-  if (currentProgress > 0 && currentProgress < totalStrokeLength) {
-    const cursorPt = normalizeToCanvas(pointOnPath(activeStrokePath, currentProgress));
-    const cursorColor = isOffPath ? '#EF4444' : '#6366F1';
-
-    // Glow
-    guideCtx.beginPath();
-    guideCtx.arc(cursorPt.x, cursorPt.y, cursorRadius + 4, 0, Math.PI * 2);
-    guideCtx.fillStyle = isOffPath ? 'rgba(239, 68, 68, 0.15)' : 'rgba(99, 102, 241, 0.15)';
-    guideCtx.fill();
-
-    // Cursor
-    guideCtx.beginPath();
-    guideCtx.arc(cursorPt.x, cursorPt.y, cursorRadius, 0, Math.PI * 2);
-    guideCtx.fillStyle = cursorColor;
-    guideCtx.fill();
-
-    guideCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-    guideCtx.lineWidth = 1.5;
-    guideCtx.stroke();
-  }
-
-  // Progress bar at bottom
-  const barWidth = canvasSize * 0.6;
-  const barHeight = 4;
-  const barX = (canvasSize - barWidth) / 2;
-  const barY = canvasSize - 16;
-  const progress = totalStrokeLength > 0 ? Math.min(currentProgress / totalStrokeLength, 1) : 0;
-
-  guideCtx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-  guideCtx.beginPath();
-  guideCtx.roundRect(barX, barY, barWidth, barHeight, 2);
-  guideCtx.fill();
-
-  guideCtx.fillStyle = isOffPath ? '#EF4444' : '#6366F1';
-  guideCtx.beginPath();
-  guideCtx.roundRect(barX, barY, barWidth * progress, barHeight, 2);
-  guideCtx.fill();
 }
 
-/* ╀──────────────────────────────────────────────────────────
-   RENDER ALL LAYERS
-─────────────────────────────────────────────────────────── */
-function renderAll() {
-  drawLiveStroke();
-  drawGuide();
+/* ink-tinted copy of the reveal mask */
+let inkCanvas = null, inkCtx = null;
+function makeInk() {
+  if (!inkCanvas || inkCanvas.width !== reveal.width || inkCanvas.height !== reveal.height) {
+    inkCanvas = document.createElement('canvas');
+    inkCanvas.width = reveal.width; inkCanvas.height = reveal.height;
+    inkCtx = inkCanvas.getContext('2d');
+  }
+  inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+  inkCtx.drawImage(reveal, 0, 0);
+  inkCtx.globalCompositeOperation = 'source-in';
+  const g = inkCtx.createLinearGradient(0, 0, inkCanvas.width, inkCanvas.height);
+  g.addColorStop(0, '#60A5FA'); g.addColorStop(1, '#2E6BE6');
+  inkCtx.fillStyle = g;
+  inkCtx.fillRect(0, 0, inkCanvas.width, inkCanvas.height);
+  inkCtx.globalCompositeOperation = 'source-over';
+  return inkCanvas;
 }
 
-/* ═════════════════════════════════════════════════════════════
-   POINTER HANDLING
-════════════════════════════════════════════════════════════ */
-const guideCanvas = document.getElementById('guideCanvas');
+function getCss(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 
-guideCanvas.addEventListener('pointerdown', (e) => {
+/* ============================ tracing input ============================ */
+stage.addEventListener('pointerdown', e => {
   e.preventDefault();
-  guideCanvas.setPointerCapture(e.pointerId);
-  isPointerDown = true;
-  handlePointerMove(getCanvasPoint(e));
-});
-
-guideCanvas.addEventListener('pointermove', (e) => {
-  e.preventDefault();
-  if (isPointerDown) {
-    handlePointerMove(getCanvasPoint(e));
-  }
-});
-
-guideCanvas.addEventListener('pointerup', () => {
-  isPointerDown = false;
-});
-
-guideCanvas.addEventListener('pointercancel', () => {
-  isPointerDown = false;
-});
-
-function handlePointerMove(point) {
-  if (letterComplete || !activeStrokePath) return;
-
-  // Convert to normalized coordinates
-  const normalizedPoint = canvasToNormalized(point);
-
-  const snapTolerance = CONFIG.SNAP_TOLERANCE;
-  const closest = closestPointOnPath(activeStrokePath, normalizedPoint);
-
-  isOffPath = closest.dist > snapTolerance;
-
-  if (!isOffPath && closest.arc > currentProgress) {
-    currentProgress = Math.min(closest.arc, totalStrokeLength);
-    renderAll();
-    updateProgress();
-
-    if (currentProgress >= totalStrokeLength * CONFIG.COMPLETION_THRESHOLD) {
-      completeStroke();
-    }
+  stage.setPointerCapture(e.pointerId);
+  lastInput = performance.now(); hintT = 0;
+  if (finished || snapAnim || demoAnim || !strokes[si]) return;
+  const p = evPos(e);
+  const st = strokes[si];
+  const tip = pointAt(st, progress);
+  const startTol = Math.max(CFG.tolMin, tip.r * CFG.startTolScale) + 18;
+  if (Math.hypot(p.x - tip.x, p.y - tip.y) <= startTol) {
+    tracing = true;
+    offPathSince = 0;
+    lastP = p;
+    feed(p);
   } else {
-    renderAll();
-    updateHintState();
+    // nudge: pulse the start/tip marker so the player knows where to touch
+    offPathSince = performance.now() - CFG.offPathMs;
+  }
+});
+
+stage.addEventListener('pointermove', e => {
+  if (!tracing) return;
+  e.preventDefault();
+  lastInput = performance.now();
+  const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ev of events) feed(evPos(ev));
+});
+
+['pointerup', 'pointercancel'].forEach(t =>
+  stage.addEventListener(t, () => { tracing = false; offPathSince = 0; lastP = null; })
+);
+
+function feed(p) {
+  const st = strokes[si];
+  if (!st || snapAnim) return;
+
+  const moved = lastP ? Math.hypot(p.x - lastP.x, p.y - lastP.y) : 0;
+  lastP = p;
+
+  const hit = locate(st, p, progress - CFG.backWindow, progress + CFG.aheadWindow);
+  const tolHere = hit.s >= 0
+    ? Math.max(CFG.tolMin, pointAt(st, hit.s).r * CFG.tolScale)
+    : 0;
+
+  if (hit.s >= 0 && hit.dist <= tolHere) {
+    offPathSince = 0;
+    if (hit.s > progress) {
+      const cap = progress + moved * CFG.advancePerMove + CFG.advanceFloor;
+      progress = Math.min(hit.s, cap, st.len);
+      advanceReveal(si, progress);
+    }
+    const endTol = Math.max(CFG.endTolMin, st.pts[st.pts.length - 1].r * CFG.endTolScale);
+    if (progress >= st.len - endTol) completeStroke();
+  } else {
+    if (!offPathSince) offPathSince = performance.now();
+    else if (performance.now() - offPathSince > CFG.offPathMs * 2) {
+      sfx.off();
+      if (navigator.vibrate) navigator.vibrate(18);
+      offPathSince = performance.now();
+    }
   }
 }
 
-/* ═════════════════════════════════════════════════════════════
-   STROKE COMPLETION
-════════════════════════════════════════════════════════════ */
 function completeStroke() {
-  currentProgress = totalStrokeLength;
-  renderAll();
+  tracing = false;
+  snapAnim = { from: progress, start: performance.now() };
+  sfx.strokeDone();
+  if (navigator.vibrate) navigator.vibrate(10);
+}
 
-  // Add to completed strokes
-  completedStrokes.push(activeStrokePath);
-  drawCompletedStrokes();
-
-  // Clear live canvas
-  liveCtx.clearRect(0, 0, canvasSize, canvasSize);
-
-  const letter = lettersData[currentLetterIndex];
-  const totalStrokes = letter.strokes.length;
-
-  if (currentStrokeIndex + 1 < totalStrokes) {
-    // Load next stroke
-    loadStroke(currentStrokeIndex + 1);
-  } else {
-    // Letter complete
-    completeLetter();
+function finishSnapTick(now) {
+  if (!snapAnim) return;
+  const st = strokes[si];
+  const t = clamp((now - snapAnim.start) / CFG.snapMs, 0, 1);
+  progress = lerp(snapAnim.from, st.len, t);
+  advanceReveal(si, progress);
+  if (t >= 1) {
+    paintCorridor(rctx, st, 0, st.len);   // crisp final pass over the stroke
+    revealed[si] = st.len;
+    snapAnim = null;
+    si++;
+    progress = 0;
+    lastP = null;
+    if (si >= strokes.length) completeLetter();
+    buildStrokebar();
   }
 }
 
 function completeLetter() {
-  letterComplete = true;
-  completedLetters.add(currentLetterIndex);
-  activeStrokePath = null;
-
-  // Re-render: in exact mode the whole letterform floods with ink.
-  drawCompletedStrokes();
-  guideCtx.clearRect(0, 0, canvasSize, canvasSize);
-
-  // Show completion overlay
-  document.getElementById('completionOverlay').classList.add('visible');
-
-  updateUI();
-  updateLetterStrip();
-
-  // Auto-advance after delay
-  if (currentLetterIndex < lettersData.length - 1) {
-    setTimeout(() => {
-      document.getElementById('completionOverlay').classList.remove('visible');
-      nextLetter();
-    }, 1800);
-  } else {
-    // All letters complete
-    setTimeout(() => {
-      document.getElementById('completionOverlay').classList.remove('visible');
-      document.querySelector('.completion-title').textContent = 'All Complete!';
-      document.querySelector('.completion-subtitle').textContent = 'You\'ve mastered all the letters';
-      document.getElementById('completionOverlay').classList.add('visible');
-    }, 1800);
+  finished = true;
+  // flood the whole glyph — covers any sliver the corridors missed
+  rctx.fillStyle = '#fff';
+  rctx.fillRect(0, 0, reveal.width, reveal.height);
+  sfx.letterDone();
+  if (navigator.vibrate) navigator.vibrate([16, 60, 24]);
+  doneSet.add(letter.id);
+  localStorage.setItem('trace_done_v2', JSON.stringify([...doneSet]));
+  for (let i = 0; i < 70; i++) {
+    const a = Math.random() * Math.PI * 2, v = 4 + Math.random() * 9;
+    particles.push({
+      x: VB / 2, y: VB / 2.4,
+      vx: Math.cos(a) * v, vy: Math.sin(a) * v - 6,
+      s: 5 + Math.random() * 9, life: .9 + Math.random() * .7,
+      c: ['#4F8DFD', '#22C55E', '#F59E0B', '#EC4899', '#A855F7'][i % 5]
+    });
   }
+  setTimeout(() => {
+    document.getElementById('cGlyph').textContent = letter.glyph;
+    document.getElementById('cSub').textContent = (letter.roman || letter.id) + ' — traced!';
+    document.getElementById('celebrate').classList.add('open');
+  }, 900);
 }
 
-/* ═════════════════════════════════════════════════════════════
-   LETTER & STROKE LOADING
-════════════════════════════════════════════════════════════ */
-function loadLetter(index) {
-  if (index < 0 || index >= lettersData.length) return;
-
-  currentLetterIndex = index;
-  letterComplete = false;
-  completedStrokes = [];
-  currentStrokeIndex = 0;
-
-  // Reset completion overlay
-  document.getElementById('completionOverlay').classList.remove('visible');
-  document.querySelector('.completion-title').textContent = 'Letter Complete!';
-  document.querySelector('.completion-subtitle').textContent = 'Great job — continue to the next letter';
-
-  setupCanvas();
-
-  const letter = lettersData[index];
-  drawBackground(letter.char || Object.keys(letter.strokes?.[0] || {})[0] || 'ཀ');
-  drawCompletedStrokes();
-
-  loadStroke(0);
-
-  updateUI();
-  updateLetterStrip();
-
-  // Scroll strip button into view
-  const stripBtn = document.getElementById(`strip-${index}`);
-  if (stripBtn) {
-    stripBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }
+/* ============================ demo ("show me") ============================ */
+function startDemo() {
+  si = 0; progress = 0; finished = false;
+  revealed = strokes.map(() => 0);
+  rctx.clearRect(0, 0, reveal.width, reveal.height);
+  document.getElementById('celebrate').classList.remove('open');
+  demoAnim = { k: 0, s: 0 };
+  buildStrokebar();
 }
 
-function loadStroke(index) {
-  currentStrokeIndex = index;
-  currentProgress = 0;
-  isOffPath = false;
-  isPointerDown = false;
-
-  const letter = lettersData[currentLetterIndex];
-  const strokeData = letter.strokes[index];
-
-  if (strokeData && strokeData.points) {
-    activeStrokePath = strokeData.points;
-  } else if (Array.isArray(strokeData)) {
-    activeStrokePath = strokeData;
-  } else {
-    activeStrokePath = [];
-  }
-
-  totalStrokeLength = pathLength(activeStrokePath);
-  waypoints = buildWaypoints(activeStrokePath);
-
-  liveCtx.clearRect(0, 0, canvasSize, canvasSize);
-  renderAll();
-
-  updateUI();
-}
-
-/* ═════════════════════════════════════════════════════════════
-   NAVIGATION
-════════════════════════════════════════════════════════════ */
-function previousLetter() {
-  if (currentLetterIndex > 0) {
-    loadLetter(currentLetterIndex - 1);
-  }
-}
-
-function nextLetter() {
-  if (currentLetterIndex < lettersData.length - 1) {
-    loadLetter(currentLetterIndex + 1);
-  }
-}
-
-function retryLetter() {
-  loadLetter(currentLetterIndex);
-}
-
-/* ═════════════════════════════════════════════════════════════
-   UI UPDATES
-════════════════════════════════════════════════════════════ */
-function buildLetterStrip() {
-  const strip = document.getElementById('letterStrip');
-  strip.innerHTML = '';
-
-  lettersData.forEach((letter, index) => {
-    const char = letter.char || Object.keys(letter.strokes?.[0] || {})[0] || '?';
-
-    const btn = document.createElement('button');
-    btn.className = 'strip-btn';
-    btn.textContent = char;
-    btn.title = letter.name || `Letter ${index + 1}`;
-    btn.id = `strip-${index}`;
-    btn.onclick = () => loadLetter(index);
-    strip.appendChild(btn);
-  });
-
-  updateLetterStrip();
-}
-
-function updateLetterStrip() {
-  lettersData.forEach((_, index) => {
-    const btn = document.getElementById(`strip-${index}`);
-    if (!btn) return;
-
-    let classes = 'strip-btn';
-    if (index === currentLetterIndex) classes += ' active';
-    if (completedLetters.has(index)) classes += ' completed';
-    btn.className = classes;
-  });
-}
-
-function updateUI() {
-  const letter = lettersData[currentLetterIndex];
-  const char = letter.char || '?';
-  const name = letter.name || `Letter ${currentLetterIndex + 1}`;
-  const wylie = letter.wylie || '';
-  const totalStrokes = letter.strokes.length;
-
-  document.getElementById('infoChar').textContent = char;
-  document.getElementById('infoName').textContent = name;
-  document.getElementById('infoWylie').textContent = wylie || char;
-
-  if (letterComplete) {
-    document.getElementById('strokeLabel').textContent = 'Complete';
-    document.getElementById('progressPercent').textContent = '100%';
-    document.getElementById('progressFill').style.width = '100%';
-    document.getElementById('progressFill').className = 'progress-fill complete';
-  } else {
-    document.getElementById('strokeLabel').textContent =
-      `Stroke ${currentStrokeIndex + 1} of ${totalStrokes}`;
-    const percent = totalStrokeLength > 0
-      ? Math.round((currentProgress / totalStrokeLength) * 100)
-      : 0;
-    document.getElementById('progressPercent').textContent = `${percent}%`;
-    document.getElementById('progressFill').style.width = `${percent}%`;
-    document.getElementById('progressFill').className =
-      `progress-fill ${isOffPath ? 'error' : ''}`;
-  }
-
-  // Update stroke dots
-  const dotsContainer = document.getElementById('strokesDots');
-  dotsContainer.innerHTML = '';
-
-  for (let i = 0; i < totalStrokes; i++) {
-    const dot = document.createElement('div');
-    dot.className = 'stroke-dot';
-
-    if (letterComplete || i < currentStrokeIndex) {
-      dot.classList.add('complete');
-    } else if (i === currentStrokeIndex) {
-      dot.classList.add('active');
+function demoTick() {
+  if (!demoAnim) return;
+  const st = strokes[demoAnim.k];
+  demoAnim.s += 9;
+  si = demoAnim.k;
+  progress = clamp(demoAnim.s, 0, st.len);
+  advanceReveal(demoAnim.k, progress);
+  if (demoAnim.s >= st.len + 30) {
+    demoAnim.k++;
+    demoAnim.s = 0;
+    if (demoAnim.k >= strokes.length) {
+      demoAnim = null;
+      setTimeout(() => {          // reset for the player's turn
+        si = 0; progress = 0;
+        revealed = strokes.map(() => 0);
+        rctx.clearRect(0, 0, reveal.width, reveal.height);
+        buildStrokebar();
+      }, 650);
     } else {
-      dot.classList.add('pending');
+      si = demoAnim.k;
+      progress = 0;
+      buildStrokebar();
     }
-
-    dotsContainer.appendChild(dot);
-  }
-
-  // Update hint
-  updateHintState();
-
-  // Update navigation buttons
-  document.getElementById('btnPrev').disabled = currentLetterIndex === 0;
-  document.getElementById('btnNext').disabled = currentLetterIndex === lettersData.length - 1;
-
-  // Update next button style
-  const btnNext = document.getElementById('btnNext');
-  if (completedLetters.has(currentLetterIndex) && currentLetterIndex < lettersData.length - 1) {
-    btnNext.className = 'btn-control success';
-  } else {
-    btnNext.className = 'btn-control primary';
   }
 }
 
-function updateProgress() {
-  if (letterComplete) return;
-
-  const percent = totalStrokeLength > 0
-    ? Math.round((currentProgress / totalStrokeLength) * 100)
-    : 0;
-
-  document.getElementById('progressPercent').textContent = `${percent}%`;
-  document.getElementById('progressFill').style.width = `${percent}%`;
-  document.getElementById('progressFill').className = `progress-fill ${isOffPath ? 'error' : ''}`;
-
-  updateHintState();
-}
-
-function updateHintState() {
-  const hintBox = document.getElementById('hintBox');
-  const hintText = document.getElementById('hintText');
-
-  hintBox.classList.remove('active', 'error', 'done');
-
-  if (letterComplete) {
-    hintBox.classList.add('done');
-    hintText.textContent = currentLetterIndex < lettersData.length - 1
-      ? 'Great job! Press Next to continue.'
-      : 'All letters complete!';
-  } else if (isOffPath) {
-    hintBox.classList.add('error');
-    hintText.textContent = 'Off path — move back to the dotted guide';
-  } else {
-    hintBox.classList.add('active');
-    const percent = totalStrokeLength > 0
-      ? Math.round((currentProgress / totalStrokeLength) * 100)
-      : 0;
-    hintText.textContent = `Trace the dotted path (${percent}%)`;
-  }
-}
-
-/* ═════════════════════════════════════════════════════════════
-   IMPORT / EXPORT
-════════════════════════════════════════════════════════════ */
-function showImport() {
-  document.getElementById('importScreen').style.display = 'flex';
-  document.getElementById('practiceScreen').classList.remove('visible');
-}
-
-function showPractice() {
-  document.getElementById('importScreen').style.display = 'none';
-  document.getElementById('practiceScreen').classList.add('visible');
-}
-
-function loadImportData() {
-  const textarea = document.getElementById('importTextarea');
-  const errorEl = document.getElementById('importError');
-
-  errorEl.classList.remove('visible');
-  const raw = textarea.value.trim();
-
-  if (!raw) {
-    errorEl.textContent = 'Please paste JSON data';
-    errorEl.classList.add('visible');
-    return;
-  }
-
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch (e) {
-    errorEl.textContent = 'Invalid JSON format';
-    errorEl.classList.add('visible');
-    return;
-  }
-
-  // Parse different format versions
-  lettersData = [];
-  appMode = false;
-
-  if (Array.isArray(data.letters)) {
-    // App format (assets/tracing/letters.json): exact outline + regions.
-    loadAppFormat(data);
-  } else if (data.letters && typeof data.letters === 'object') {
-    // v2.0 / v3.0 recorder format
-    Object.entries(data.letters).forEach(([char, letterData]) => {
-      const strokes = extractStrokes(letterData);
-      if (strokes.length > 0) {
-        lettersData.push({
-          char,
-          name: letterData.name || char,
-          wylie: letterData.wylie || '',
-          strokes
-        });
-      }
-    });
-  } else if (Array.isArray(data)) {
-    // Legacy array format
-    data.forEach((item, index) => {
-      const strokes = extractStrokes(item);
-      if (strokes.length > 0) {
-        lettersData.push({
-          char: item.char || `?${index}`,
-          name: item.name || `Letter ${index + 1}`,
-          wylie: item.wylie || '',
-          strokes
-        });
-      }
-    });
-  }
-
-  if (lettersData.length === 0) {
-    errorEl.textContent = 'No valid letter data found';
-    errorEl.classList.add('visible');
-    return;
-  }
-
-  activateLetters();
-}
-
-/* App format: the exact geometry the mobile app ships
-   (outline SVG path + per-stroke medial points, widths and fill regions,
-   all in a viewBox-sized square, y-down). */
-function loadAppFormat(doc) {
-  appMode = true;
-  viewBoxSize = doc.viewBox || 1000;
-
-  lettersData = (doc.letters || [])
-    .filter(L => L.available && Array.isArray(L.strokes) && L.strokes.length)
-    .map(L => {
-      // Self-heal: if any stroke arrives without its fill region (older
-      // data), synthesize pixel-perfect regions from the exact outline —
-      // otherwise the renderer would fall back to round-capped brush
-      // strokes that leave the limb tips unfilled.
-      let regionStrs = L.strokes.map(s => s.region || null);
-      if (L.outline && regionStrs.some(r => !r) && typeof StrokeRefine !== 'undefined') {
-        try {
-          const mask = StrokeRefine.rasterizePolygons(
-            StrokeRefine.parsePathPolygons(L.outline, 32),
-            viewBoxSize, viewBoxSize, 'nonzero');
-          const synth = StrokeRefine.buildRegions(mask,
-            L.strokes.map(s => ({ points: s.points, width: s.width })));
-          regionStrs = regionStrs.map((r, i) => r || synth[i] || null);
-          console.info(`Synthesized fill regions for ${L.glyph}`);
-        } catch (e) {
-          console.warn('Region synthesis failed for', L.glyph, e);
-        }
-      }
-      return {
-        char: L.glyph,
-        name: (L.roman || L.id || '').replace(/^./, c => c.toUpperCase()),
-        wylie: L.roman || L.id || '',
-        outline: L.outline ? new Path2D(L.outline) : null,
-        regions: regionStrs.map(r => r ? new Path2D(r) : null),
-        widths: L.strokes.map(s => s.width || 100),
-        strokes: L.strokes.map(s =>
-          s.points.map(p => ({ x: p[0] / viewBoxSize, y: p[1] / viewBoxSize }))
-        ),
-      };
-    })
-    .filter(L => L.strokes.every(pts => pts.length >= 2));
-}
-
-function activateLetters() {
-  currentLetterIndex = 0;
-  completedLetters.clear();
-
-  // Show the practice screen BEFORE sizing canvases: while it is
-  // display:none the canvas wrapper measures 0×0 and nothing renders.
-  showPractice();
-  buildLetterStrip();
-  loadLetter(0);
-
-  showToast(`Loaded ${lettersData.length} letters` + (appMode ? ' (exact mode)' : ''));
-}
-
-function extractStrokes(letterData) {
-  const raw = letterData.strokes;
-  if (!Array.isArray(raw) || raw.length === 0) return [];
-
-  return raw.map(stroke => {
-    if (Array.isArray(stroke)) {
-      return stroke.filter(p => typeof p.x === 'number' && typeof p.y === 'number');
-    } else if (stroke.points && Array.isArray(stroke.points)) {
-      return stroke.points.filter(p => typeof p.x === 'number' && typeof p.y === 'number');
-    }
-    return [];
-  }).filter(pts => pts.length >= 2);
-}
-
-/* ═════════════════════════════════════════════════════════════
-   TOAST
-════════════════════════════════════════════════════════════ */
-let toastTimer;
-function showToast(message) {
-  const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.classList.add('show');
-
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toast.classList.remove('show');
-  }, 2500);
-}
-
-/* ═════════════════════════════════════════════════════════════
-   RESIZE HANDLER
-════════════════════════════════════════════════════════════ */
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    if (!lettersData.length) return;
-
-    setupCanvas();
-
-    const letter = lettersData[currentLetterIndex];
-    drawBackground(letter.char || 'ཀ');
-
-    // Rescale completed strokes
-    completedStrokes = [];
-    for (let i = 0; i < currentStrokeIndex; i++) {
-      const strokeData = letter.strokes[i];
-      if (strokeData.points) {
-        completedStrokes.push(strokeData.points);
-      } else if (Array.isArray(strokeData)) {
-        completedStrokes.push(strokeData);
-      }
-    }
-
-    drawCompletedStrokes();
-
-    if (!letterComplete && currentStrokeIndex < letter.strokes.length) {
-      const strokeData = letter.strokes[currentStrokeIndex];
-      if (strokeData.points) {
-        activeStrokePath = strokeData.points;
-      } else if (Array.isArray(strokeData)) {
-        activeStrokePath = strokeData;
-      }
-
-      totalStrokeLength = pathLength(activeStrokePath);
-      waypoints = buildWaypoints(activeStrokePath);
-      currentProgress = 0;
-    }
-
-    renderAll();
-  }, 150);
-});
-
-/* ═════════════════════════════════════════════════════════════
-   KEYBOARD SHORTCUTS
-════════════════════════════════════════════════════════════ */
-document.addEventListener('keydown', (e) => {
-  if (lettersData.length === 0) return;
-
-  switch (e.key) {
-    case 'ArrowLeft':
-      previousLetter();
-      break;
-    case 'ArrowRight':
-      nextLetter();
-      break;
-    case 'r':
-    case 'R':
-      retryLetter();
-      break;
-  }
-});
-
-/* ═════════════════════════════════════════════════════════════
-   INITIALIZATION
-════════════════════════════════════════════════════════════ */
-document.fonts.ready.then(() => {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      setupCanvas();
-
-      // Auto-start when pre-baked app data (letters.js) is present.
-      if (window.LETTERS_DATA && Array.isArray(window.LETTERS_DATA.letters)) {
-        loadAppFormat(window.LETTERS_DATA);
-        if (lettersData.length > 0) {
-          activateLetters();
-
-          // QA hook: ?qa=N pre-completes the first N strokes so the
-          // fill rendering can be screenshot without interaction.
-          const qa = parseInt(new URLSearchParams(location.search).get('qa') || '', 10);
-          if (qa > 0) {
-            const letter = lettersData[0];
-            const n = Math.min(qa, letter.strokes.length - 1);
-            for (let i = 0; i < n; i++) completedStrokes.push(letter.strokes[i]);
-            loadStroke(n);
-            drawCompletedStrokes();
-          }
-        }
-      }
-    });
+/* ============================ chrome ============================ */
+function buildGrid() {
+  const grid = document.getElementById('lgrid');
+  grid.innerHTML = '';
+  LETTERS.forEach((L, i) => {
+    const c = document.createElement('div');
+    c.className = 'lcell' + (i === cur ? ' sel' : '');
+    c.innerHTML = `<div class="g">${L.glyph}</div><div class="r">${L.roman || L.id}</div>` +
+      (doneSet.has(L.id) ? '<div class="done-mark">✓</div>' : '');
+    c.onclick = () => { document.getElementById('sheet').classList.remove('open'); loadLetter(i); };
+    grid.appendChild(c);
   });
+}
+function buildGridSel() { if (document.getElementById('sheet').classList.contains('open')) buildGrid(); }
+
+document.getElementById('btnGrid').onclick = () => { buildGrid(); document.getElementById('sheet').classList.add('open'); };
+document.getElementById('sheet').addEventListener('click', e => {
+  if (e.target === document.getElementById('sheet')) e.currentTarget.classList.remove('open');
 });
+document.getElementById('btnReset').onclick = () => loadLetter(cur);
+document.getElementById('btnHint').onclick = () => startDemo();
+document.getElementById('btnPrev').onclick = () => loadLetter(cur - 1);
+document.getElementById('btnNext').onclick = () => loadLetter(cur + 1);
+document.getElementById('btnNext2').onclick = () => loadLetter(cur + 1);
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ============================ main loop ============================ */
+function frame(now) {
+  finishSnapTick(now);
+  demoTick();
+  render();
+  requestAnimationFrame(frame);
+}
+
+if (!LETTERS.length) {
+  document.body.innerHTML = '<p style="margin:40px;font-size:16px">letters.js not found or empty — run <code>node generate-strokes.cjs</code> first.</p>';
+} else {
+  fit();
+  loadLetter(0);
+  requestAnimationFrame(frame);
+}
 </script>
 </body>
 </html>
