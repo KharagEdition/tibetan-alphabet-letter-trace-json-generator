@@ -1,187 +1,124 @@
-# Tibetan Alphabet Stroke Tracer
+# Tibetan Alphabet Letter Tracing
 
-A professional web-based tool for recording and practicing Tibetan letter stroke orders. This project consists of two interconnected HTML applications:
+Game-grade stroke tracing for all 30 Tibetan consonants (ཀ – ཨ), with fully
+automatic stroke-data generation from the font glyphs themselves.
 
-1. **Stroke Recorder** - Record stroke paths for Tibetan letters
-2. **Stroke Tracer** - Practice tracing with guided feedback
+- **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)** — the tracing game
+- **[Stroke Recorder](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)** — optional manual recorder (legacy)
 
-## Live Demo
+## How it works
 
-- [Stroke Recorder](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)
-- [Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)
+The system has two halves: a **generator** that derives stroke guide paths from
+the Noto Serif Tibetan outlines, and a **tracer** that turns them into a
+zero-seam tracing game.
 
-## Quick Start
+### 1. Stroke generator (`generate-strokes.cjs`)
 
-### Part 1: Recording Stroke Data
+Every letter's strokes are extracted automatically from its glyph outline:
 
-1. Open the **[Stroke Recorder](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)**
+```
+outline (SVG path)
+  → nonzero-fill rasterization (1000×1000)
+  → exact Euclidean distance transform  (local ink radius everywhere)
+  → Guo–Hall thinning                   (1-px skeleton)
+  → skeleton graph                      (endpoints/junctions + branches)
+  → spur pruning                        (serif/flare artifacts, scaled by local radius)
+  → head-bar extraction                 (top-band branches welded into ONE left→right bar,
+                                         bridged across junction-wedge breaks)
+  → collinear branch merging            (smooth continuations chain through junctions)
+  → redundancy cleanup                  (short strokes whose ink is already covered are dropped)
+  → smoothing                           (Douglas-Peucker + Chaikin, straight-limb collapse)
+  → tip extension                       (reach the true limb ends)
+  → per-point radius sampling           (from the distance field)
+  → ordering by Tibetan writing rules   (head bar first, then top→bottom, left→right;
+                                         horizontals run left→right, verticals top→bottom)
+```
 
-2. Select a letter from the grid (e.g., ཀ - Ka)
+Run it:
 
-3. Draw each stroke of the letter:
-   - Touch/click and drag on the canvas to draw a stroke
-   - The app automatically filters and simplifies your points
-   - Click **"Add Stroke"** to commit each stroke
-   - Continue until all strokes are recorded
+```bash
+node generate-strokes.cjs             # rewrites letters.json + letters.js
+node generate-strokes.cjs --dry-run   # report only
+node generate-strokes.cjs --preview   # also writes strokes-preview.svg (QA grid)
+node generate-strokes.cjs --only ka,kha
+```
 
-4. Click **"✓ Save Letter & Continue"** to save
+The generator prints an ink-coverage percentage per letter (how much of the
+glyph the stroke corridors cover) — all 30 letters sit at 99.5 – 100 %.
 
-5. Repeat for all 30 consonants
+### 2. Tracer (`stroke-trace.html`)
 
-6. Export your data:
-   - Click the **📦** icon
-   - Copy or download the JSON file
+Two invariants make the tracing robust ("zero stroke issues"):
 
-### Part 2: Practicing Tracing
+1. **Ink = brush ∩ glyph.** Revealed ink is a round-cap corridor painted along
+   the guide path with the *local ink radius* (from the distance field), then
+   clipped to the glyph outline. Visible edges always come from the font
+   geometry, so there are no seams at stroke junctions and no gaps at flared
+   tips. When the final stroke completes, the whole glyph floods so no sliver
+   is ever left behind.
 
-1. Open the **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)**
+2. **Monotonic arc-length progress.** Pointer input is matched to the guide
+   path only inside a small window ahead of current progress, with a per-event
+   advance cap. You cannot skip across the letter, jump to the end, or scrub
+   backwards — the stroke must be travelled in order, in the right direction.
+   Tolerance scales with the local limb radius.
 
-2. Paste the JSON data from the Stroke Recorder
+Game feel: numbered start badges, animated dashed guide with direction
+chevrons, idle hint dot, off-path ring + haptic feedback, per-stroke progress
+bar, finish-snap animation, confetti + chime on completion, a "show me" demo
+mode, and per-letter progress saved in `localStorage`.
 
-3. Click **"Load Letters →"**
+## JSON format (v2)
 
-4. Practice tracing:
-   - Follow the numbered waypoints (1, 2, 3...)
-   - Stay within the tolerance zone (blue guide path)
-   - The letter fills in as you trace correctly
-   - Red indicator appears if you go off-track
-
-## Features
-
-### Stroke Recorder
-
-| Feature | Description |
-|---------|-------------|
-| **Point Smoothing** | Douglas-Peucker simplification algorithm |
-| **Curve Interpolation** | Catmull-Rom spline for smooth curves |
-| **Normalization** | Resolution-independent 0-1 coordinate system |
-| **Adaptive Filtering** | Removes touch jitter automatically |
-| **Processing Stats** | Shows raw → filtered → simplified point counts |
-
-### Stroke Tracer
-
-| Feature | Description |
-|---------|-------------|
-| **Distance-Based Validation** | Accurate path following detection |
-| **Key Point Waypoints** | Numbered markers at actual stroke features |
-| **Tolerance Zone** | 8% forgiveness for natural variations |
-| **Progress Tracking** | Real-time completion percentage |
-| **Off-Path Detection** | Visual feedback when you stray |
-| **Fog-of-War Reveal** | Letter fills as you trace correctly |
-
-## JSON Format (v1.0)
-
-The exported JSON uses a normalized coordinate system for resolution independence:
-
-```json
+```jsonc
 {
-  "version": "1.0",
-  "coordinateSystem": "normalized-0-1",
-  "canvasSize": 1000,
-  "letters": {
-    "ཀ": {
-      "name": "Ka",
-      "index": 1,
+  "version": 1,
+  "viewBox": 1000,                  // all coordinates are 0–1000
+  "letters": [
+    {
+      "id": "ka",
+      "glyph": "ཀ",
+      "roman": "ka",
+      "order": 1,
+      "outline": "M758.0 40.0 …Z",  // exact glyph outline (SVG path data)
       "strokes": [
         {
-          "type": "path",
-          "points": [
-            {"x": 0.5, "y": 0.2},
-            {"x": 0.5, "y": 0.5},
-            {"x": 0.3, "y": 0.8}
-          ]
+          "points": [[283, 104.9], …],   // guide path centerline
+          "radii":  [47.0, 46.2, …],     // local ink radius at each point
+          "width":  94.2                 // 2 × median radius (fallback)
         }
-      ],
-      "boundingBox": {
-        "minX": 0.1,
-        "maxX": 0.9,
-        "minY": 0.1,
-        "maxY": 0.9
-      }
+      ]
     }
-  }
+  ]
 }
 ```
 
-## How It Works
+`letters.js` is the same document as `window.LETTERS_DATA` for file:// use.
 
-### Point Processing Pipeline
+## Using the data in your own app
 
-```
-Raw Capture → Min Distance Filter → Douglas-Peucker → Catmull-Rom → Normalize 0-1
-```
+Per stroke, the render/validate recipe is:
 
-1. **Raw Capture** - Records points as you draw
-2. **Min Distance Filter** - Removes jitter (adaptive threshold)
-3. **Douglas-Peucker** - Simplifies while preserving shape
-4. **Catmull-Rom** - Generates smooth curves through points
-5. **Normalize** - Converts to 0-1 coordinates for any resolution
+1. Build a dense polyline from `points`, interpolate `radii` along it.
+2. Reveal: stamp discs of `radius × ~1.3` along the traced portion, clipped to
+   `outline` (Android: `clipPath` + `drawCircle`; the outline string is valid
+   `PathParser` / `Path2D` input).
+3. Validate: nearest point on path within `[progress − 55, progress + 90]`,
+   tolerance `max(42, radius × 2.1)`, cap the advance per event, complete at
+   `length − max(34, endRadius × 1.6)`.
+4. On the last stroke's completion, fill the whole outline.
 
-### Tracing Validation
+## Repo map
 
-The tracer uses distance-based validation:
-
-1. Finds the closest point on the stroke path to your input
-2. Measures the perpendicular distance
-3. Checks if within tolerance (8% of canvas size)
-4. Tracks cumulative distance along the stroke for progress
-
-## Technical Details
-
-### Configuration Constants
-
-**Recorder:**
-- `SIMPLIFY_EPSILON: 0.008` - Douglas-Peucker tolerance
-- `MIN_PT_DISTANCE: 0.015` - Minimum point spacing
-- `CANVAS_PADDING: 0.13` - 13% padding around letter
-
-**Tracer:**
-- `TOLERANCE_RATIO: 0.08` - 8% path tolerance
-- `KEY_POINT_ANGLE_THRESHOLD: π/5` - Corner detection threshold
-
-### Browser Compatibility
-
-- Modern browsers with Canvas API support
-- Touch devices (tablets recommended)
-- Desktop with mouse/touchpad
-
-## Tips for Best Results
-
-### Recording
-
-1. **Use a stylus** on a tablet for most accurate strokes
-2. **Draw slowly and steadily** - the app will smooth and simplify
-3. **Follow the actual stroke order** of Tibetan calligraphy
-4. **Each stroke should be one continuous motion**
-5. **Review processing stats** - fewer points = cleaner data
-
-### Tracing
-
-1. **Start at waypoint 1** (green circle when reached)
-2. **Follow the dotted blue line** as your guide
-3. **Go through each numbered waypoint** in order
-4. **Stay within the tolerance zone** - don't stray too far
-5. **The progress bar** shows how much of the stroke remains
-
-## Tibetan Stroke Order Reference
-
-The standard stroke order for Tibetan consonants follows the traditional calligraphic sequence:
-
-1. **Horizontal head stroke** (when present)
-2. **Vertical main stroke**
-3. **Diagonal connecting strokes**
-4. **Closing strokes**
-
-The recorded data should reflect the proper order for educational use.
-
-## Data Storage
-
-Recorded data is saved to your browser's localStorage (`tib_paths_v3`). Data persists between sessions but is browser-specific. Always export your JSON for backup.
+| File | Purpose |
+|---|---|
+| `generate-strokes.cjs` | automatic stroke extraction (the algorithm above) |
+| `refine.js` | geometry primitives (path parsing, rasterizer, EDT, contours) |
+| `letters.json` / `letters.js` | generated stroke data for all 30 consonants |
+| `stroke-trace.html` | the tracing game |
+| `strokes-preview.svg` | QA grid of every letter's strokes (run with `--preview`) |
+| `index.html` | legacy manual stroke recorder |
 
 ## License
 
-MIT License - feel free to use and modify for your projects.
-
-## Credits
-
-Created for Tibetan language learning and calligraphy practice.
+MIT
