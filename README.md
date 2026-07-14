@@ -5,6 +5,13 @@ automatic stroke-data generation from the font glyphs themselves.
 
 - **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)** — the tracing game
 - **[Stroke Recorder](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)** — optional manual recorder (legacy)
+## Preview
+
+<img height="415" alt="Tracing" src="https://github.com/user-attachments/assets/135d167b-3b73-422d-82c5-d7aaf124f96b" />
+
+<img width="400" alt="Stroke" src="https://github.com/user-attachments/assets/a01e54e3-5076-496c-bd58-c0eee2a59772" />
+
+
 
 ## How it works
 
