@@ -4,6 +4,7 @@ Game-grade stroke tracing for all 30 Tibetan consonants (ཀ – ཨ), with full
 automatic stroke-data generation from the font glyphs themselves.
 
 - **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)** — the tracing game
+- **[Stroke Editor](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/editor.html)** — author/fix stroke paths and order by hand
 - **[Stroke Recorder](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)** — optional manual recorder (legacy)
 
 ## How it works
@@ -67,6 +68,25 @@ Game feel: numbered start badges, animated dashed guide with direction
 chevrons, idle hint dot, off-path ring + haptic feedback, per-stroke progress
 bar, finish-snap animation, confetti + chime on completion, a "show me" demo
 mode, and per-letter progress saved in `localStorage`.
+
+### 3. Stroke editor (`editor.html`)
+
+The generator gets ~90 % of the way; the editor is where you make each letter
+exactly right — proper traditional stroke order and clean paths, drawn by a
+person who knows the script:
+
+- every letter opens **prefilled** with the current strokes; fix only what's wrong
+- paths are **anchor-based**: click to place points, drag to move; segments
+  between points are smooth curves or straight lines (double-click a point to
+  toggle corner ⇄ curve) — zero zigzag by construction
+- points are **clamped inside the glyph outline** automatically
+- reorder strokes (writing order), reverse direction, add/delete strokes
+- **▶ Test in tracer** sends your work straight to the tracing game;
+  **⇩ letters.json / letters.js** downloads the production files
+- work is auto-saved in the browser; *Revert letter* restores the generated data
+
+Traditional order to follow (per Uchen calligraphy convention): head (mgo)
+line first, drawn left→right; then remaining strokes top→bottom, left→right.
 
 **Custom data:** the 📂 button in the tracer loads your own JSON — pick a
 file or paste it. It accepts the v2 format below, and also the legacy

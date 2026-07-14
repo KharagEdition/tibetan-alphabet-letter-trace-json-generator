@@ -150,6 +150,7 @@
     <button class="icon" id="btnHint"  title="Show me">👁</button>
     <button class="icon" id="btnReset" title="Start over">↺</button>
     <button class="icon" id="btnLoad"  title="Load custom JSON">📂</button>
+    <button class="icon" onclick="location.href='editor.html'" title="Stroke editor">✎</button>
     <button class="icon" id="btnGrid"  title="All letters">▦</button>
   </div>
 </header>
@@ -537,18 +538,18 @@ function render() {
     ctx.restore();
   }
 
-  /* current stroke: corridor tint + dashed centerline + chevrons */
+  /* current stroke: corridor tint + dashed centerline + chevrons.
+     The tint is built opaque on an offscreen layer and blitted once with
+     alpha, so overlapping dabs can't stack into scallops. */
   if (!finished && strokes[si]) {
     const st = strokes[si];
     ctx.save();
     if (glyphPath) ctx.clip(glyphPath);
-    ctx.strokeStyle = 'rgba(79,141,253,.15)';
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (let i = 4; i < st.pts.length; i += 4) {
-      const a = st.pts[i - 4], b = st.pts[i];
-      ctx.lineWidth = Math.max(14, (a.r + b.r) * CFG.brushScale);
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = .16;
+    ctx.drawImage(tintLayer(), 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.restore();
 
     ctx.save();
@@ -641,6 +642,27 @@ function render() {
     }
     ctx.globalAlpha = 1;
   }
+}
+
+/* corridor tint layer for the current stroke (opaque, blitted with alpha) */
+let tintCache = { si: -1, letter: null, canvas: null };
+function tintLayer() {
+  if (tintCache.si === si && tintCache.letter === letter &&
+      tintCache.canvas && tintCache.canvas.width === reveal.width) {
+    return tintCache.canvas;
+  }
+  const c = (tintCache.canvas && tintCache.canvas.width === reveal.width)
+    ? tintCache.canvas : document.createElement('canvas');
+  c.width = reveal.width; c.height = reveal.height;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  paintCorridor(g, strokes[si], 0, strokes[si].len);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = '#4F8DFD';
+  g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'source-over';
+  tintCache = { si, letter, canvas: c };
+  return c;
 }
 
 /* ink-tinted copy of the reveal mask */
