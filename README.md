@@ -3,9 +3,9 @@
 Game-grade stroke tracing for all 30 Tibetan consonants (ཀ – ཨ), with fully
 automatic stroke-data generation from the font glyphs themselves.
 
-- **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)** — the tracing game
-- **[Stroke Editor](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/editor.html)** — author/fix stroke paths and order by hand
-- **[Stroke Recorder](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)** — optional manual recorder (legacy)
+- **[Stroke Studio](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)** — edit strokes AND trace them **side by side, live**; export letters.json from the same page
+- **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)** — the standalone tracing game
+- **[Stroke Recorder](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/recorder.html)** — optional manual recorder (legacy)
 ## Preview
 
 <img height="415" alt="Tracing" src="https://github.com/user-attachments/assets/135d167b-3b73-422d-82c5-d7aaf124f96b" />
@@ -54,16 +54,21 @@ node generate-strokes.cjs --only ka,kha
 The generator prints an ink-coverage percentage per letter (how much of the
 glyph the stroke corridors cover) — all 30 letters sit at 99.5 – 100 %.
 
-### 2. Tracer (`stroke-trace.html`)
+### 2. Tracing engine (`trace-core.js`, used by the Studio and `stroke-trace.html`)
 
-Two invariants make the tracing robust ("zero stroke issues"):
+Two invariants make the tracing exact:
 
-1. **Ink = brush ∩ glyph.** Revealed ink is a round-cap corridor painted along
-   the guide path with the *local ink radius* (from the distance field), then
-   clipped to the glyph outline. Visible edges always come from the font
-   geometry, so there are no seams at stroke junctions and no gaps at flared
-   tips. When the final stroke completes, the whole glyph floods so no sliver
-   is ever left behind.
+1. **Region reveal.** When a letter loads, every ink pixel of the glyph is
+   pre-partitioned among the strokes and stamped with the arc position at
+   which the pen reaches it (nearest guide segment within a claim radius;
+   ink beyond the stroke tips belongs to the tip; leftovers split by lateral
+   distance so junction seams stay straight). Tracing reveals exactly the
+   pixels whose stroke is finished, or whose stroke is current and whose arc
+   position is behind the finger. The union of all stroke regions is the
+   entire glyph, so a finished stroke shows its full true share of the
+   letterform — flared tips, serifs and junction wedges included — and the
+   completed letter is pixel-identical to the font glyph. No gaps, no
+   blobs, no end-of-letter "flood" hack.
 
 2. **Monotonic arc-length progress.** Pointer input is matched to the guide
    path only inside a small window ahead of current progress, with a per-event
@@ -71,16 +76,20 @@ Two invariants make the tracing robust ("zero stroke issues"):
    backwards — the stroke must be travelled in order, in the right direction.
    Tolerance scales with the local limb radius.
 
+Letters without an outline (legacy recorder data) fall back to corridor
+painting along the guide path.
+
 Game feel: numbered start badges, animated dashed guide with direction
 chevrons, idle hint dot, off-path ring + haptic feedback, per-stroke progress
 bar, finish-snap animation, confetti + chime on completion, a "show me" demo
 mode, and per-letter progress saved in `localStorage`.
 
-### 3. Stroke editor (`editor.html`)
+### 3. Stroke Studio (`index.html`)
 
-The generator gets ~90 % of the way; the editor is where you make each letter
-exactly right — proper traditional stroke order and clean paths, drawn by a
-person who knows the script:
+The generator gets ~90 % of the way; the Studio is where you make each letter
+exactly right — and **you see the result as you edit**: the anchor editor and
+the real tracing game sit side by side on one page, always in sync. No
+exporting, no copying JSON between URLs.
 
 - every letter opens **prefilled** with the current strokes; fix only what's wrong
 - paths are **anchor-based**: click to place points, drag to move; segments
@@ -88,9 +97,13 @@ person who knows the script:
   toggle corner ⇄ curve) — zero zigzag by construction
 - points are **clamped inside the glyph outline** automatically
 - reorder strokes (writing order), reverse direction, add/delete strokes
-- **▶ Test in tracer** sends your work straight to the tracing game;
-  **⇩ letters.json / letters.js** downloads the production files
+- the **live trace pane** reloads within ~0.3 s of every edit — trace it
+  right there, run the 👁 demo, restart with ↺
+- **⇩ letters.json / letters.js** downloads the production files from the
+  same page; *Open full tracer* launches the standalone game with your data
 - work is auto-saved in the browser; *Revert letter* restores the generated data
+
+(`editor.html` now redirects here; saved edits carry over.)
 
 Traditional order to follow (per Uchen calligraphy convention): head (mgo)
 line first, drawn left→right; then remaining strokes top→bottom, left→right.
@@ -145,12 +158,15 @@ Per stroke, the render/validate recipe is:
 
 | File | Purpose |
 |---|---|
+| `index.html` | **Stroke Studio** — anchor editor + live tracer side by side |
+| `trace-core.js` | shared tracing engine (region reveal + validation + game feel) |
 | `generate-strokes.cjs` | automatic stroke extraction (the algorithm above) |
 | `refine.js` | geometry primitives (path parsing, rasterizer, EDT, contours) |
 | `letters.json` / `letters.js` | generated stroke data for all 30 consonants |
-| `stroke-trace.html` | the tracing game |
+| `stroke-trace.html` | the standalone tracing game |
 | `strokes-preview.svg` | QA grid of every letter's strokes (run with `--preview`) |
-| `index.html` | legacy manual stroke recorder |
+| `editor.html` | redirect to the Studio (kept for old links) |
+| `recorder.html` | legacy manual stroke recorder |
 
 ## License
 
