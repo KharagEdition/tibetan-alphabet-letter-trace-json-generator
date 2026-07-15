@@ -32,8 +32,25 @@
      • the reveal front is the arc-length level set: a clean band
        moving perpendicular to the writing direction.
 
+   Region reveal alone looks wrong at OVERLAPS: where a stroke crosses
+   itself (or another stroke), each pixel belongs to exactly one pass,
+   so mid-stroke the crossing renders as hard-edged wedges — half the
+   ink under the brush stays dark until its own arc position is
+   reached. So the visible ink is the UNION of two layers:
+
+     1. a smooth vector brush corridor stamped along the traced
+        portion (round caps, local ink radius) — under and around the
+        pen the stroke always looks like one solid drawn line, and a
+        crossing is painted on BOTH passes;
+     2. the region reveal — softly anti-aliased — which fills the
+        stroke's full true territory (flared tips, serifs, junction
+        wedges) so nothing pops or is left missing when the stroke
+        completes.
+
+   Both are clipped to the glyph outline at composite time.
+
    Letters without an outline (legacy recorder data) fall back to the
-   old corridor painting.
+   corridor layer alone.
 
    INPUT VALIDATION (unchanged, it was already good)
    -------------------------------------------------
@@ -166,7 +183,7 @@
   /* ---------------- region map ----------------
      Partition every ink pixel of the glyph among the strokes and record
      the arc position at which tracing reaches that pixel. */
-  const REGION_RES = 448;
+  const REGION_RES = 512;
 
   function buildRegionMap(outline, strokes) {
     if (!outline || !strokes.length || typeof document === 'undefined') return null;
@@ -366,7 +383,8 @@
       this.regionPtr = [];             // reveal pointer per stroke
       this.regionDirty = false;
 
-      /* corridor fallback (letters without an outline) */
+      /* brush corridor layer (always painted; sole layer when there is
+         no outline) */
       this.reveal = document.createElement('canvas');
       this.rctx = this.reveal.getContext('2d');
       this.revealed = [];
@@ -405,7 +423,7 @@
       this.reveal.width = this.canvas.width;
       this.reveal.height = this.canvas.height;
       this._tintCache = null;
-      if (this.letter) this._redrawFallbackReveal();
+      if (this.letter) this._redrawCorridor();
     }
 
     /* letter: {glyph, roman, outline?, strokes:[{points,radii?,width?}]} in vb 1000 */
@@ -486,7 +504,7 @@
       }
     }
 
-    /* ---------------- corridor fallback ---------------- */
+    /* ---------------- brush corridor layer ---------------- */
     _paintCorridor(g, st, s0, s1) {
       const scale = (this.CSS * this.DPR) / VB;
       const step = 3;
@@ -503,8 +521,7 @@
       g.fill();
     }
 
-    _redrawFallbackReveal() {
-      if (this.region) return;
+    _redrawCorridor() {
       this.rctx.clearRect(0, 0, this.reveal.width, this.reveal.height);
       this.strokes.forEach((st, k) => {
         if (this.finished) this._paintCorridor(this.rctx, st, 0, st.len);
@@ -513,20 +530,22 @@
     }
 
     _advanceReveal(k, to) {
-      if (this.region) {
-        const q = pointAt(this.strokes[k], to);
-        this._revealRegionTo(k, to + Math.max(CFG.revealLead, q.r));
-      } else {
-        const st = this.strokes[k];
-        if (to <= this.revealed[k]) return;
+      const st = this.strokes[k];
+      if (to > this.revealed[k]) {
         this._paintCorridor(this.rctx, st, this.revealed[k], to);
         this.revealed[k] = to;
+      }
+      if (this.region) {
+        const q = pointAt(st, to);
+        this._revealRegionTo(k, to + Math.max(CFG.revealLead, q.r));
       }
     }
 
     _completeStrokeReveal(k) {
+      const st = this.strokes[k];
+      this._paintCorridor(this.rctx, st, 0, st.len);
+      this.revealed[k] = st.len;
       if (this.region) this._revealRegionAll(k);
-      else { this._paintCorridor(this.rctx, this.strokes[k], 0, this.strokes[k].len); this.revealed[k] = this.strokes[k].len; }
     }
 
     /* ---------------- input ---------------- */
@@ -698,13 +717,20 @@
       const g = this.inkCtx;
       g.clearRect(0, 0, w, h);
       if (this.region) {
+        /* region territory, softly anti-aliased (stair-step seams from
+           the raster mask disappear under a ~1px blur; the glyph clip
+           in render() keeps the outer edges crisp) */
         this._flushRegion();
+        g.save();
         g.imageSmoothingEnabled = true;
         g.imageSmoothingQuality = 'high';
+        try { g.filter = 'blur(1.2px)'; } catch (e) { /* filter unsupported */ }
         g.drawImage(this.regionCanvas, 0, 0, w, h);
-      } else {
-        g.drawImage(this.reveal, 0, 0);
+        g.restore();
       }
+      /* smooth vector brush corridor on top — the drawn line itself,
+         solid through self-crossings and junctions */
+      g.drawImage(this.reveal, 0, 0);
       g.globalCompositeOperation = 'source-in';
       const grad = g.createLinearGradient(0, 0, w, h);
       grad.addColorStop(0, this.opts.inkFrom); grad.addColorStop(1, this.opts.inkTo);
