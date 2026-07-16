@@ -105,6 +105,10 @@ exporting, no copying JSON between URLs.
   right there, run the 👁 demo, restart with ↺
 - **⇩ letters.json / letters.js** downloads the production files from the
   same page; *Open full tracer* launches the standalone game with your data
+- **⇪ Import JSON** loads a previously exported `letters.json` (or
+  `letters.js`) back into the Studio for re-editing — strokes, anchors and
+  brush settings round-trip exactly; a partial file with just the letters
+  you want to fix works too (matched by id/glyph, others stay untouched)
 - work is auto-saved in the browser; *Revert letter* restores the generated data
 
 (`editor.html` now redirects here; saved edits carry over.)
