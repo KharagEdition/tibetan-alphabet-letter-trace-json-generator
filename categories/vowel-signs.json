@@ -1,0 +1,48 @@
+{
+ "version": 1,
+ "viewBox": 1000,
+ "category": "vowelSigns",
+ "label": "Vowel Signs",
+ "letters": [
+  {
+   "id": "vowel_i",
+   "glyph": "ི",
+   "roman": "i",
+   "order": 55,
+   "category": "vowelSign",
+   "outline": null,
+   "strokes": [],
+   "available": false
+  },
+  {
+   "id": "vowel_u",
+   "glyph": "ུ",
+   "roman": "u",
+   "order": 56,
+   "category": "vowelSign",
+   "outline": null,
+   "strokes": [],
+   "available": false
+  },
+  {
+   "id": "vowel_e",
+   "glyph": "ེ",
+   "roman": "e",
+   "order": 57,
+   "category": "vowelSign",
+   "outline": null,
+   "strokes": [],
+   "available": false
+  },
+  {
+   "id": "vowel_o",
+   "glyph": "ོ",
+   "roman": "o",
+   "order": 58,
+   "category": "vowelSign",
+   "outline": null,
+   "strokes": [],
+   "available": false
+  }
+ ]
+}

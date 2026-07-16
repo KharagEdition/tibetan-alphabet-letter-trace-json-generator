@@ -1,0 +1,48 @@
+{
+ "version": 1,
+ "viewBox": 1000,
+ "category": "subscribed",
+ "label": "Subscribed Letters",
+ "letters": [
+  {
+   "id": "sub_ya",
+   "glyph": "ྱ",
+   "roman": "ya-btags",
+   "order": 39,
+   "category": "subscribed",
+   "outline": null,
+   "strokes": [],
+   "available": false
+  },
+  {
+   "id": "sub_ra",
+   "glyph": "ྲ",
+   "roman": "ra-btags",
+   "order": 40,
+   "category": "subscribed",
+   "outline": null,
+   "strokes": [],
+   "available": false
+  },
+  {
+   "id": "sub_la",
+   "glyph": "ླ",
+   "roman": "la-btags",
+   "order": 41,
+   "category": "subscribed",
+   "outline": null,
+   "strokes": [],
+   "available": false
+  },
+  {
+   "id": "sub_wa",
+   "glyph": "ྭ",
+   "roman": "wa-zur",
+   "order": 42,
+   "category": "subscribed",
+   "outline": null,
+   "strokes": [],
+   "available": false
+  }
+ ]
+}
