@@ -117,6 +117,23 @@
       r: raw.radii ? raw.radii[Math.min(i, raw.radii.length - 1)] : (raw.width || 60) / 2
     }));
     if (src.length === 1) src.push({ ...src[0], x: src[0].x + 1 });
+
+    /* Radii sampled from the glyph's distance field SPIKE wherever the
+       stroke passes a junction or crosses another limb (ink is wide in
+       every direction there, but the pen isn't). A real brush keeps a
+       steady width — so cap each radius near the stroke's own median,
+       then smooth, so the drawn line is plain and solid everywhere. */
+    const sortedR = src.map(p => p.r).sort((a, b) => a - b);
+    const medR = sortedR[sortedR.length >> 1] || 30;
+    const capR = Math.max(medR * 1.35, 12);
+    for (const p of src) p.r = Math.min(p.r, capR);
+    for (let pass = 0; pass < 2; pass++) {
+      const prev = src.map(p => p.r);
+      for (let i = 0; i < src.length; i++) {
+        const a = prev[Math.max(0, i - 1)], b = prev[i], c = prev[Math.min(src.length - 1, i + 1)];
+        src[i].r = (a + 2 * b + c) / 4;
+      }
+    }
     const pts = [];
     for (let i = 0; i < src.length - 1; i++) {
       const a = src[i], b = src[i + 1];
@@ -128,6 +145,18 @@
       }
     }
     pts.push({ ...src[src.length - 1] });
+
+    /* rate-limit the width along the arc (≤ ~0.4 per vb unit) so it can
+       only taper gently, never balloon */
+    for (let i = 1; i < pts.length; i++) {
+      const ds = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      pts[i].r = Math.min(pts[i].r, pts[i - 1].r + 0.4 * ds);
+    }
+    for (let i = pts.length - 2; i >= 0; i--) {
+      const ds = Math.hypot(pts[i].x - pts[i + 1].x, pts[i].y - pts[i + 1].y);
+      pts[i].r = Math.min(pts[i].r, pts[i + 1].r + 0.4 * ds);
+    }
+
     const cum = [0];
     for (let i = 1; i < pts.length; i++) {
       cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
@@ -188,7 +217,10 @@
     /* guide segments (subsampled ~9 vb units) */
     const segs = [];
     strokes.forEach((st, si) => {
-      const claim = Math.max(1.6 * (st.width || 80), 24);
+      /* keep the claim tight — with a wide claim a stroke grabs ink deep
+         inside its neighbours (e.g. the head bar "drips" into the stem),
+         which looks wrong the moment that stroke settles */
+      const claim = Math.max(1.0 * (st.width || 80), 24);
       const maxD2 = claim * claim;
       const step = 9;
       let s = 0;
@@ -281,7 +313,7 @@
 
   /* ---------------- tuning (vb units) ---------------- */
   const CFG = {
-    brushScale: 1.3,       // corridor-fallback brush = local radius × this
+    brushScale: 1.2,       // brush radius = (capped) local radius × this
     tolScale: 2.1,         // finger tolerance = local radius × this
     tolMin: 42,
     startTolScale: 2.6,    // touch-down tolerance around stroke start / tip

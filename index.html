@@ -238,7 +238,7 @@
 
 <script src="letters.js?v=5"></script>
 <script src="refine.js"></script>
-<script src="trace-core.js?v=3"></script>
+<script src="trace-core.js?v=4"></script>
 <script>
 'use strict';
 /* ============================================================
@@ -443,12 +443,16 @@ function commit(mark = true) {
       acc += dist2(pts[i - 1], pts[i]);
       if (acc >= 12 || i === pts.length - 1) { res.push(pts[i]); acc = 0; }
     }
-    const rr = res.map(p => Math.round(radiusVB(p.x, p.y) * 10) / 10);
+    /* distance-field radii spike at junctions/overlaps — cap near the
+       stroke's own median so the brush width stays steady */
+    let rr = res.map(p => radiusVB(p.x, p.y));
     const sorted = rr.slice().sort((a, b) => a - b);
+    const medR = sorted[sorted.length >> 1] || 30;
+    rr = rr.map(r => Math.round(Math.min(r, medR * 1.35) * 10) / 10);
     out.push({
       points: res.map(p => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]),
       radii: rr,
-      width: Math.round(2 * sorted[sorted.length >> 1] * 10) / 10,
+      width: Math.round(2 * medR * 10) / 10,
       anchors: s.anchors.map(a => ({ x: Math.round(a.x * 10) / 10, y: Math.round(a.y * 10) / 10, c: a.c ? 1 : 0 }))
     });
   }
@@ -502,13 +506,19 @@ function render() {
     const current = k === cs;
 
     if (current && field) {
+      /* corridor preview with junction-capped radii — same steady brush
+         width the tracer draws with */
+      const rads = [];
+      for (let i = 0; i < pts.length; i += 2) rads.push(radiusVB(pts[i].x, pts[i].y));
+      const sr = rads.slice().sort((a, b) => a - b);
+      const capR = (sr[sr.length >> 1] || 30) * 1.35;
       ctx.save();
       if (glyphPath) ctx.clip(glyphPath);
       ctx.globalAlpha = .14;
       ctx.fillStyle = col;
-      for (let i = 0; i < pts.length; i += 2) {
+      for (let i = 0, j = 0; i < pts.length; i += 2, j++) {
         const p = pts[i];
-        ctx.beginPath(); ctx.arc(p.x, p.y, radiusVB(p.x, p.y) * 1.3, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, Math.min(rads[j], capR) * 1.2, 0, 7); ctx.fill();
       }
       ctx.globalAlpha = 1;
       ctx.restore();
