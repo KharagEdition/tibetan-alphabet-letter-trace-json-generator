@@ -227,6 +227,7 @@
         <button class="primary small" id="btnDlJson">⇩ letters.json</button>
         <button class="small" id="btnDlJs">⇩ letters.js</button>
         <button class="small" id="btnCopy">Copy JSON</button>
+        <button class="small" id="btnImport">⇪ Import JSON</button>
         <button class="small" id="btnFullTracer">Open full tracer</button>
       </div>
     </div>
@@ -249,6 +250,29 @@
   <div class="sheet-card">
     <h4 style="margin-bottom:10px;color:var(--muted)">Choose a letter — ✎ means edited</h4>
     <div class="lgrid" id="lgrid"></div>
+  </div>
+</div>
+
+<div class="sheet" id="importSheet">
+  <div class="sheet-card">
+    <h4 style="margin-bottom:10px;color:var(--muted)">Import letters.json — re-edit previously exported letters</h4>
+    <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">
+      Pick a <b>letters.json</b> (or <b>letters.js</b>) you exported earlier, or paste
+      the JSON below. Letters found in the file replace the ones in your working
+      copy (matched by id/glyph) — including strokes, anchors and brush settings —
+      so you can continue editing exactly where you left off. Letters not in the
+      file stay untouched. A partial file with just the letters you want works too.
+    </p>
+    <input type="file" id="impFile" accept=".json,.js,application/json,text/javascript"
+           style="margin-bottom:10px;color:var(--muted);font-size:13px">
+    <textarea id="impPaste" placeholder='{"version":1,"viewBox":1000,"letters":[...]}'
+      style="width:100%;height:140px;background:var(--panel-2);border:1px solid var(--line);
+             border-radius:10px;color:var(--text);font-family:monospace;font-size:12px;
+             padding:10px;resize:vertical;margin-bottom:12px"></textarea>
+    <div class="row">
+      <button class="primary small" id="btnImpApply">Import</button>
+      <button class="small" id="btnImpCancel">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -849,6 +873,81 @@ document.getElementById('btnFullTracer').onclick = () => {
     localStorage.setItem('trace_custom_data', exportDoc());
     window.open('stroke-trace.html', '_blank');
   } catch (e) { toast('Could not store data: ' + e.message); }
+};
+
+/* ---------------- import (re-edit exported JSON) ---------------- */
+const importSheet = document.getElementById('importSheet');
+document.getElementById('btnImport').onclick = () => importSheet.classList.add('open');
+document.getElementById('btnImpCancel').onclick = () => importSheet.classList.remove('open');
+importSheet.addEventListener('click', e => {
+  if (e.target === importSheet) importSheet.classList.remove('open');
+});
+document.getElementById('impFile').onchange = e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  f.text().then(t => { document.getElementById('impPaste').value = t; })
+    .catch(() => toast('Could not read that file'));
+};
+
+/* accept raw JSON or a letters.js ("window.LETTERS_DATA = {...};") */
+function parseLettersText(txt) {
+  txt = txt.trim();
+  const m = txt.match(/window\.LETTERS_DATA\s*=\s*/);
+  if (m) {
+    txt = txt.slice(m.index + m[0].length).trim();
+    txt = txt.replace(/;\s*$/, '');
+  }
+  return JSON.parse(txt);
+}
+
+/* merge uploaded letters into the working doc by id/glyph.
+   Studio-format docs (viewBox 1000, letters array) keep their anchors and
+   per-stroke brush; anything else goes through TraceCore.normalizeDoc
+   (handles legacy shapes + coordinate scaling) and anchors are rebuilt
+   from the points on load. */
+function importParsed(parsed) {
+  if (!parsed || typeof parsed !== 'object') throw new Error('not a JSON object');
+  let list;
+  if (Array.isArray(parsed.letters) && (parsed.viewBox || 1000) === 1000) {
+    list = parsed.letters;
+  } else {
+    list = TC.normalizeDoc(parsed);
+  }
+  let applied = 0;
+  const names = [];
+  for (const src of list) {
+    if (!src || !Array.isArray(src.strokes) || !src.strokes.length) continue;
+    const ok = src.strokes.every(st => st && Array.isArray(st.points) && st.points.length >= 2);
+    if (!ok) continue;
+    const dst = doc.letters.find(L =>
+      (src.id && L.id === src.id) || (src.glyph && L.glyph === src.glyph));
+    if (!dst) continue;
+    dst.strokes = JSON.parse(JSON.stringify(src.strokes));
+    if (src.outline) dst.outline = src.outline;
+    dst.editedAt = src.editedAt || Date.now();
+    names.push(dst.roman || dst.id);
+    applied++;
+  }
+  if (!applied) throw new Error('no matching letters with strokes found');
+  try { localStorage.setItem('editor_work_v1', JSON.stringify(doc)); }
+  catch (e) { toast('Warning: could not save working copy (storage full)'); }
+  return { applied, names };
+}
+
+document.getElementById('btnImpApply').onclick = () => {
+  const txt = document.getElementById('impPaste').value.trim();
+  if (!txt) { toast('Choose a file or paste JSON first'); return; }
+  try {
+    const { applied, names } = importParsed(parseLettersText(txt));
+    importSheet.classList.remove('open');
+    document.getElementById('impPaste').value = '';
+    document.getElementById('impFile').value = '';
+    loadLetterIdx(li);          // refresh current letter + rail with imported data
+    toast(`Imported ${applied} letter${applied > 1 ? 's' : ''}` +
+      (applied <= 5 ? ` (${names.join(', ')})` : '') + ' — pick any letter to re-edit');
+  } catch (err) {
+    toast('Import failed: ' + err.message);
+  }
 };
 
 /* ---------------- letter rail + grid ---------------- */
