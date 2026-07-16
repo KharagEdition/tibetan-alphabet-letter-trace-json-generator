@@ -197,6 +197,19 @@
     </div>
 
     <div>
+      <h4>Brush <span style="color:var(--muted)">(how the trace draws)</span></h4>
+      <div class="row" style="margin-top:6px">
+        <button class="small on" id="brushFollow" title="brush follows the letter's limb thickness">〰 Follow letter</button>
+        <button class="small" id="brushFixed" title="one constant width per stroke — a plain marker line">— Fixed</button>
+      </div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--muted)">Width</span>
+        <input type="range" id="brushWidth" min="50" max="200" value="100" step="5" style="flex:1;accent-color:var(--accent)">
+        <span id="brushWidthVal" style="font-size:12px;color:var(--muted);min-width:38px;text-align:right">100%</span>
+      </div>
+    </div>
+
+    <div>
       <h4>Letter</h4>
       <div class="row" style="margin-top:6px">
         <button class="small" id="btnRevert">Revert letter</button>
@@ -238,7 +251,7 @@
 
 <script src="letters.js?v=5"></script>
 <script src="refine.js"></script>
-<script src="trace-core.js?v=3"></script>
+<script src="trace-core.js?v=5"></script>
 <script>
 'use strict';
 /* ============================================================
@@ -362,6 +375,28 @@ const engine = window.__engine = new TC.TraceEngine(trStage, {
     document.getElementById('traceDone').textContent = 'Perfect! ✨';
   }
 });
+
+/* ---------------- brush settings (global, saved + exported) ---------------- */
+let brush = TC.normalizeBrush((() => {
+  try { const b = JSON.parse(localStorage.getItem('studio_brush_v1')); if (b) return b; } catch (e) {}
+  return doc.brush || (window.LETTERS_DATA && window.LETTERS_DATA.brush) || null;
+})());
+
+function applyBrush(save = true) {
+  engine.setBrush(brush);
+  document.getElementById('brushFollow').classList.toggle('on', brush.mode === 'follow');
+  document.getElementById('brushFixed').classList.toggle('on', brush.mode === 'fixed');
+  const pct = Math.round(brush.widthScale * 100);
+  document.getElementById('brushWidth').value = pct;
+  document.getElementById('brushWidthVal').textContent = pct + '%';
+  if (save) { try { localStorage.setItem('studio_brush_v1', JSON.stringify(brush)); } catch (e) {} }
+  if (typeof field !== 'undefined' && letter) render();   // editor preview mirrors the brush
+}
+document.getElementById('brushFollow').onclick = () => { brush.mode = 'follow'; applyBrush(); };
+document.getElementById('brushFixed').onclick = () => { brush.mode = 'fixed'; applyBrush(); };
+document.getElementById('brushWidth').oninput = e => {
+  brush.widthScale = e.target.value / 100; applyBrush();
+};
 
 let syncTimer = 0;
 function syncTracer(immediate) {
@@ -502,13 +537,22 @@ function render() {
     const current = k === cs;
 
     if (current && field) {
+      /* corridor preview drawn with the SAME brush settings as the tracer */
+      let fixedR = 0;
+      if (brush.mode === 'fixed') {
+        const rs = [];
+        for (let i = 0; i < pts.length; i += 2) rs.push(radiusVB(pts[i].x, pts[i].y));
+        rs.sort((a, b) => a - b);
+        fixedR = rs[rs.length >> 1] || 30;
+      }
       ctx.save();
       if (glyphPath) ctx.clip(glyphPath);
       ctx.globalAlpha = .14;
       ctx.fillStyle = col;
       for (let i = 0; i < pts.length; i += 2) {
         const p = pts[i];
-        ctx.beginPath(); ctx.arc(p.x, p.y, radiusVB(p.x, p.y) * 1.3, 0, 7); ctx.fill();
+        const r = (brush.mode === 'fixed' ? fixedR : radiusVB(p.x, p.y)) * 1.3 * brush.widthScale;
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fill();
       }
       ctx.globalAlpha = 1;
       ctx.restore();
@@ -722,6 +766,7 @@ document.getElementById('btnRevert').onclick = () => {
 /* ---------------- output ---------------- */
 function exportDoc() {
   commit(false);
+  doc.brush = { ...brush };   // ship the brush look with the data
   return JSON.stringify(doc, null, 1);
 }
 function download(name, text) {
@@ -790,6 +835,7 @@ if (!window.LETTERS_DATA || !SR || !TC) {
   document.body.innerHTML = '<p style="margin:40px">letters.js / refine.js / trace-core.js missing.</p>';
 } else {
   fit();
+  applyBrush(false);
   loadLetterIdx(0);
 }
 </script>

@@ -207,7 +207,7 @@
 </div>
 
 <script src="letters.js?v=5"></script>
-<script src="trace-core.js?v=3"></script>
+<script src="trace-core.js?v=5"></script>
 <script>
 'use strict';
 /* ============================================================
@@ -224,11 +224,18 @@ const TC = window.TraceCore;
 const BUILTIN = (() => {
   try { return TC.normalizeDoc(window.LETTERS_DATA); } catch (e) { return []; }
 })();
+const BUILTIN_BRUSH = TC.normalizeBrush(window.LETTERS_DATA && window.LETTERS_DATA.brush);
 let LETTERS = BUILTIN;
+let activeBrush = BUILTIN_BRUSH;
 let usingCustom = false;
 try {
   const saved = localStorage.getItem('trace_custom_data');
-  if (saved) { LETTERS = TC.normalizeDoc(JSON.parse(saved)); usingCustom = true; }
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    LETTERS = TC.normalizeDoc(parsed);
+    activeBrush = TC.normalizeBrush(parsed.brush || BUILTIN_BRUSH);
+    usingCustom = true;
+  }
 } catch (e) { localStorage.removeItem('trace_custom_data'); }
 
 const stage = document.getElementById('stage');
@@ -323,8 +330,10 @@ document.getElementById('btnApplyJson').onclick = () => {
   const txt = document.getElementById('jsonPaste').value.trim();
   if (!txt) { toast('Choose a file or paste JSON first'); return; }
   try {
-    const letters = TC.normalizeDoc(JSON.parse(txt));
+    const parsed = JSON.parse(txt);
+    const letters = TC.normalizeDoc(parsed);
     LETTERS = letters;
+    engine.setBrush(TC.normalizeBrush(parsed.brush || BUILTIN_BRUSH));
     usingCustom = true;
     try { localStorage.setItem('trace_custom_data', txt); }
     catch (q) { toast('Loaded (too large to remember across reloads)'); }
@@ -338,6 +347,7 @@ document.getElementById('btnApplyJson').onclick = () => {
 document.getElementById('btnBuiltin').onclick = () => {
   localStorage.removeItem('trace_custom_data');
   LETTERS = BUILTIN;
+  engine.setBrush(BUILTIN_BRUSH);
   usingCustom = false;
   loadSheet.classList.remove('open');
   if (LETTERS.length) loadLetter(0);
@@ -356,6 +366,7 @@ function toast(msg) {
 if (!LETTERS.length) {
   document.body.innerHTML = '<p style="margin:40px;font-size:16px">letters.js not found or empty — run <code>node generate-strokes.cjs</code> first.</p>';
 } else {
+  engine.setBrush(activeBrush);
   fit();
   loadLetter(0);
 }

@@ -4,44 +4,33 @@
    Used by index.html (the Studio, editor + live tracer) and
    stroke-trace.html (the standalone tracing game).
 
-   THE REVEAL ALGORITHM (brush corridor + settling territories)
-   -------------------------------------------------------------
-   The old tracer stamped round brush dabs along the guide path and
-   clipped them to the glyph. Wherever the guide didn't sit exactly on
-   the limb centerline — or the local radius was under-estimated —
-   that left uncovered slivers, scalloped edges and blobs until the
-   final "flood" hid them.
+   THE REVEAL MODEL (plain brush line → glyph fill at the end)
+   -----------------------------------------------------------
+   1. WHILE TRACING, the only ink that appears is a smooth round
+      brush line following the pen along the guide path. The brush is
+      configurable (see BRUSH below) and its width never jumps — a
+      self-crossing or junction is painted on every pass, so the line
+      is always plain and solid. Nothing else moves: no partial fills,
+      no fringes, no seams.
+   2. WHEN THE LAST STROKE COMPLETES, the whole glyph fills with a
+      smooth ~0.45 s fade — the finished letter is pixel-identical to
+      the printed letterform (the ink is always clipped to the glyph
+      outline, so its edges come from the font geometry).
 
-   This engine PRE-PARTITIONS every ink pixel of the glyph among the
-   strokes using the same claim/cap/lateral rules as refine.js
-   buildRegions (nearest guide segment within a claim radius; pixels
-   beyond the stroke tips belong to the tip; leftovers split by
-   lateral distance to the extended stroke lines). The union of all
-   stroke territories is the ENTIRE glyph.
+   BRUSH (user-configurable via setBrush)
+   --------------------------------------
+     { mode: 'follow' | 'fixed', widthScale: number }
+   - 'follow': the brush tracks the letter's local limb thickness
+     (per-point radii from the stroke data).
+   - 'fixed':  one constant width per stroke (the stroke's recorded
+     width), like a marker pen.
+   - widthScale: global multiplier (e.g. 0.5–2) applied on top.
+   Documents may carry a top-level "brush" object in letters.json;
+   hosts pass it to setBrush so the exported look is reproduced
+   everywhere.
 
-   Rendering keeps the two jobs separate so the drawing always looks
-   like a plain solid line:
-
-     1. WHILE TRACING a stroke, the ONLY visible new ink is a smooth
-        vector brush corridor stamped along the traced portion (round
-        caps, local ink radius). Nothing else moves — no territory
-        fringes, no wedges — and a self-crossing is painted on BOTH
-        passes, so the line is solid everywhere the pen has been.
-     2. WHEN A STROKE COMPLETES, its full pre-computed territory
-        (flared tips, serifs, junction wedges — its exact share of
-        the letterform) fades in underneath the corridor in ~0.25 s.
-        The stroke "settles" into its true printed shape, and when
-        the last stroke ends the letter is pixel-identical to the
-        glyph with zero slivers — no "flood" hack needed.
-
-   Territory masks are softly anti-aliased and everything is clipped
-   to the glyph outline at composite time.
-
-   Letters without an outline (legacy recorder data) fall back to the
-   corridor layer alone.
-
-   INPUT VALIDATION (unchanged, it was already good)
-   -------------------------------------------------
+   INPUT VALIDATION
+   ----------------
    Monotonic arc-length progress: the pointer only matches the guide
    inside a small window ahead of current progress, with a per-event
    advance cap — you must travel the stroke in order, in the right
@@ -56,6 +45,18 @@
   const VB = 1000;                 // everything works in a 0–1000 box
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const lerp = (a, b, t) => a + (b - a) * t;
+
+  const DEFAULT_BRUSH = { mode: 'follow', widthScale: 1 };
+
+  function normalizeBrush(b) {
+    const out = { ...DEFAULT_BRUSH };
+    if (b && typeof b === 'object') {
+      if (b.mode === 'fixed' || b.mode === 'follow') out.mode = b.mode;
+      const w = Number(b.widthScale);
+      if (isFinite(w) && w > 0) out.widthScale = clamp(w, 0.25, 3);
+    }
+    return out;
+  }
 
   /* ---------------- data normalization ----------------
      Accept several data shapes and normalize to
@@ -110,11 +111,16 @@
   }
 
   /* ---------------- stroke geometry ---------------- */
-  function buildStroke(raw) {
+  function buildStroke(raw, brush) {
+    brush = brush || DEFAULT_BRUSH;
     // dense resample (~4 vb units) + cumulative length + per-point radius
+    const fixedR = (raw.width || 60) / 2;
     const src = raw.points.map((p, i) => ({
       x: p[0], y: p[1],
-      r: raw.radii ? raw.radii[Math.min(i, raw.radii.length - 1)] : (raw.width || 60) / 2
+      r: (brush.mode === 'fixed'
+        ? fixedR
+        : (raw.radii ? raw.radii[Math.min(i, raw.radii.length - 1)] : fixedR)
+      ) * brush.widthScale
     }));
     if (src.length === 1) src.push({ ...src[0], x: src[0].x + 1 });
     const pts = [];
@@ -168,120 +174,9 @@
     return best;
   }
 
-  /* ---------------- region map ----------------
-     Partition every ink pixel of the glyph among the strokes. */
-  const REGION_RES = 512;
-
-  function buildRegionMap(outline, strokes) {
-    if (!outline || !strokes.length || typeof document === 'undefined') return null;
-    const R = REGION_RES;
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = R;
-    const g = cv.getContext('2d', { willReadFrequently: true });
-    g.setTransform(R / VB, 0, 0, R / VB, 0, 0);
-    g.fillStyle = '#fff';
-    let path;
-    try { path = new Path2D(outline); } catch (e) { return null; }
-    g.fill(path);
-    const img = g.getImageData(0, 0, R, R).data;
-
-    /* guide segments (subsampled ~9 vb units) */
-    const segs = [];
-    strokes.forEach((st, si) => {
-      const claim = Math.max(1.6 * (st.width || 80), 24);
-      const maxD2 = claim * claim;
-      const step = 9;
-      let s = 0;
-      let prev = pointAt(st, 0);
-      while (s < st.len) {
-        const s2 = Math.min(st.len, s + step);
-        const q = pointAt(st, s2);
-        const dx = q.x - prev.x, dy = q.y - prev.y;
-        const L2 = dx * dx + dy * dy;
-        if (L2 > 1e-9) {
-          segs.push({
-            si, ax: prev.x, ay: prev.y, dx, dy, L2,
-            len: Math.sqrt(L2), maxD2,
-            capStart: s === 0, capEnd: s2 >= st.len
-          });
-        }
-        prev = q; s = s2;
-      }
-    });
-    if (!segs.length) return null;
-
-    const px2vb = VB / R;
-    const strokeOf = new Int16Array(R * R).fill(-1);
-
-    for (let y = 0; y < R; y++) {
-      const vy = (y + 0.5) * px2vb;
-      for (let x = 0; x < R; x++) {
-        const i = y * R + x;
-        if (img[i * 4 + 3] < 128) continue;
-        const vx = (x + 0.5) * px2vb;
-
-        /* pass 1: nearest claimed segment (perpendicular distance) */
-        let bi = -1, bd = Infinity;
-        for (let q = 0; q < segs.length; q++) {
-          const s = segs[q];
-          let t = ((vx - s.ax) * s.dx + (vy - s.ay) * s.dy) / s.L2;
-          if (t < 0) { if (s.capStart) continue; t = 0; }
-          if (t > 1) { if (s.capEnd) continue; t = 1; }
-          const ex = s.ax + t * s.dx - vx, ey = s.ay + t * s.dy - vy;
-          const d2 = ex * ex + ey * ey;
-          if (d2 <= s.maxD2 && d2 < bd) { bd = d2; bi = s.si; }
-        }
-
-        /* pass 2: pixels beyond every cap — flared tips, far corners —
-           split by lateral distance to the extended stroke line so
-           junction seams stay straight */
-        if (bi < 0) {
-          for (let q = 0; q < segs.length; q++) {
-            const s = segs[q];
-            const t = ((vx - s.ax) * s.dx + (vy - s.ay) * s.dy) / s.L2;
-            let score;
-            if (t < 0 && s.capStart) {
-              const lat = Math.abs((vx - s.ax) * s.dy - (vy - s.ay) * s.dx) / s.len;
-              score = lat + 0.2 * (-t) * s.len;
-            } else if (t > 1 && s.capEnd) {
-              const lat = Math.abs((vx - s.ax) * s.dy - (vy - s.ay) * s.dx) / s.len;
-              score = lat + 0.2 * (t - 1) * s.len;
-            } else {
-              const tc = clamp(t, 0, 1);
-              const ex = s.ax + tc * s.dx - vx, ey = s.ay + tc * s.dy - vy;
-              score = Math.sqrt(ex * ex + ey * ey);
-            }
-            if (score < bd) { bd = score; bi = s.si; }
-          }
-        }
-
-        strokeOf[i] = bi;
-      }
-    }
-
-    /* one static territory mask canvas per stroke */
-    const territories = strokes.map((_, si) => {
-      const c = document.createElement('canvas');
-      c.width = c.height = R;
-      const g = c.getContext('2d');
-      const im = g.createImageData(R, R);
-      const d = im.data;
-      for (let i = 0; i < R * R; i++) {
-        if (strokeOf[i] === si) {
-          const o = i * 4;
-          d[o] = d[o + 1] = d[o + 2] = 255; d[o + 3] = 255;
-        }
-      }
-      g.putImageData(im, 0, 0);
-      return c;
-    });
-
-    return { res: R, territories };
-  }
-
   /* ---------------- tuning (vb units) ---------------- */
   const CFG = {
-    brushScale: 1.3,       // corridor-fallback brush = local radius × this
+    brushScale: 1.3,       // painted brush radius = configured radius × this
     tolScale: 2.1,         // finger tolerance = local radius × this
     tolMin: 42,
     startTolScale: 2.6,    // touch-down tolerance around stroke start / tip
@@ -291,7 +186,7 @@
     advanceFloor: 14,
     endTolScale: 1.6,      // stroke counts as finished this close to the end
     endTolMin: 34,
-    settleMs: 260,         // completed stroke's full territory fades in over this
+    fillMs: 450,           // whole-glyph fill animation on letter completion
     snapMs: 160,
     hintIdleMs: 3200,
     offPathMs: 420,
@@ -315,7 +210,7 @@
 
   /* ================================================================
      TraceEngine — attach to a <canvas>, feed it letters, it does the
-     rest: ghost, guides, region reveal, validation, demo, feedback.
+     rest: ghost, guides, brush reveal, validation, demo, feedback.
      ================================================================ */
   class TraceEngine {
     constructor(canvas, opts = {}) {
@@ -334,12 +229,14 @@
       }, opts);
 
       this.DPR = 1; this.CSS = 480;
+      this.brush = { ...DEFAULT_BRUSH };
       this.letter = null;
       this.glyphPath = null;
       this.strokes = [];
       this.si = 0;
       this.progress = 0;
       this.finished = false;
+      this.fillAnim = null;            // {start} whole-glyph fill on completion
       this.tracing = false;
       this.lastInput = (typeof performance !== 'undefined' ? performance.now() : 0);
       this.offPathSince = 0;
@@ -350,13 +247,7 @@
       this.lastP = null;
       this._destroyed = false;
 
-      /* territory state: per-stroke static masks that fade in when the
-         stroke completes */
-      this.region = null;              // {res, territories:[canvas]}
-      this.settledAt = [];             // per stroke: timestamp of completion, or -1
-
-      /* brush corridor layer (always painted; sole layer when there is
-         no outline) */
+      /* brush reveal layer */
       this.reveal = document.createElement('canvas');
       this.rctx = this.reveal.getContext('2d');
       this.revealed = [];
@@ -402,15 +293,20 @@
     setLetter(letter) {
       this.letter = letter || null;
       this.glyphPath = letter && letter.outline ? new Path2D(letter.outline) : null;
-      this.strokes = letter ? letter.strokes.map(buildStroke) : [];
-      this.region = (letter && letter.outline && this.strokes.length)
-        ? buildRegionMap(letter.outline, this.strokes) : null;
+      this.strokes = letter ? letter.strokes.map(s => buildStroke(s, this.brush)) : [];
       this._tintCache = null;
       this.reset();
     }
 
+    /* brush: {mode:'follow'|'fixed', widthScale} — applies immediately */
+    setBrush(brush) {
+      this.brush = normalizeBrush(brush);
+      if (this.letter) this.setLetter(this.letter);
+    }
+
     reset() {
       this.si = 0; this.progress = 0; this.finished = false;
+      this.fillAnim = null;
       this.tracing = false;
       this.snapAnim = this.demoAnim = null;
       this.particles = [];
@@ -419,7 +315,6 @@
       this.lastInput = performance.now();
       this.hintT = 0;
       this.revealed = this.strokes.map(() => 0);
-      this.settledAt = this.strokes.map(() => -1);
       this.rctx.clearRect(0, 0, this.reveal.width, this.reveal.height);
       this._emitStroke();
     }
@@ -434,7 +329,7 @@
     get strokeIndex() { return this.si; }
     get isFinished() { return this.finished; }
 
-    /* ---------------- brush corridor layer ---------------- */
+    /* ---------------- brush reveal layer ---------------- */
     _paintCorridor(g, st, s0, s1) {
       const scale = (this.CSS * this.DPR) / VB;
       const step = 3;
@@ -459,21 +354,17 @@
       });
     }
 
-    /* while tracing, only the plain brush corridor advances */
     _advanceReveal(k, to) {
       const st = this.strokes[k];
-      if (to > this.revealed[k]) {
-        this._paintCorridor(this.rctx, st, this.revealed[k], to);
-        this.revealed[k] = to;
-      }
+      if (to <= this.revealed[k]) return;
+      this._paintCorridor(this.rctx, st, this.revealed[k], to);
+      this.revealed[k] = to;
     }
 
-    /* on completion the stroke settles into its full territory */
     _completeStrokeReveal(k) {
       const st = this.strokes[k];
       this._paintCorridor(this.rctx, st, 0, st.len);
       this.revealed[k] = st.len;
-      if (this.region && this.settledAt[k] < 0) this.settledAt[k] = performance.now();
     }
 
     /* ---------------- input ---------------- */
@@ -566,7 +457,10 @@
 
     _completeLetter() {
       this.finished = true;
-      for (let k = 0; k < this.strokes.length; k++) this._completeStrokeReveal(k);
+      this.strokes.forEach((st, k) => this._completeStrokeReveal(k));
+      /* the whole glyph fills smoothly — the finished letter is the
+         exact printed letterform */
+      this.fillAnim = { start: performance.now() };
       if (this.opts.sfx) [523, 659, 784, 1047].forEach((f, i) => beep(f, .18, 'sine', .1, i * .1));
       if (this.opts.haptics && navigator.vibrate) navigator.vibrate([16, 60, 24]);
       for (let i = 0; i < 70; i++) {
@@ -640,28 +534,20 @@
       }
       const g = this.inkCtx;
       g.clearRect(0, 0, w, h);
-      if (this.region) {
-        /* completed strokes' territories, fading in over settleMs.
-           Softly anti-aliased (~1px blur kills the raster mask's
-           stair-step seams; the glyph clip in render() keeps the
-           outer edges crisp). Territories are disjoint, so per-stroke
-           alpha never stacks. */
-        g.save();
-        g.imageSmoothingEnabled = true;
-        g.imageSmoothingQuality = 'high';
-        try { g.filter = 'blur(1.2px)'; } catch (e) { /* filter unsupported */ }
-        for (let k = 0; k < this.strokes.length; k++) {
-          if (this.settledAt[k] < 0) continue;
-          const t = clamp((now - this.settledAt[k]) / CFG.settleMs, 0, 1);
-          g.globalAlpha = t * t * (3 - 2 * t);   // smoothstep
-          g.drawImage(this.region.territories[k], 0, 0, w, h);
-        }
-        g.restore();
-        g.globalAlpha = 1;
-      }
-      /* smooth vector brush corridor on top — the drawn line itself,
-         solid through self-crossings and junctions */
+      /* the brush line itself */
       g.drawImage(this.reveal, 0, 0);
+      /* completed letter: fade the whole glyph in (the ink canvas is
+         drawn clipped to the outline, so this fills exactly the glyph) */
+      if (this.fillAnim && this.glyphPath) {
+        const t = clamp((now - this.fillAnim.start) / CFG.fillMs, 0, 1);
+        const a = t * t * (3 - 2 * t);   // smoothstep
+        if (a > 0) {
+          g.globalAlpha = a;
+          g.fillStyle = '#fff';
+          g.fillRect(0, 0, w, h);
+          g.globalAlpha = 1;
+        }
+      }
       g.globalCompositeOperation = 'source-in';
       const grad = g.createLinearGradient(0, 0, w, h);
       grad.addColorStop(0, this.opts.inkFrom); grad.addColorStop(1, this.opts.inkTo);
@@ -810,5 +696,5 @@
     }
   }
 
-  return { VB, CFG, normalizeDoc, buildStroke, pointAt, locate, buildRegionMap, TraceEngine };
+  return { VB, CFG, DEFAULT_BRUSH, normalizeBrush, normalizeDoc, buildStroke, pointAt, locate, TraceEngine };
 });
