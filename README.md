@@ -56,28 +56,32 @@ glyph the stroke corridors cover) — all 30 letters sit at 99.5 – 100 %.
 
 ### 2. Tracing engine (`trace-core.js`, used by the Studio and `stroke-trace.html`)
 
-Two invariants make the tracing exact:
+The reveal model is deliberately simple so the drawing always looks right:
 
-1. **Region reveal.** When a letter loads, every ink pixel of the glyph is
-   pre-partitioned among the strokes and stamped with the arc position at
-   which the pen reaches it (nearest guide segment within a claim radius;
-   ink beyond the stroke tips belongs to the tip; leftovers split by lateral
-   distance so junction seams stay straight). Tracing reveals exactly the
-   pixels whose stroke is finished, or whose stroke is current and whose arc
-   position is behind the finger. The union of all stroke regions is the
-   entire glyph, so a finished stroke shows its full true share of the
-   letterform — flared tips, serifs and junction wedges included — and the
-   completed letter is pixel-identical to the font glyph. No gaps, no
-   blobs, no end-of-letter "flood" hack.
+1. **While tracing, ink is a plain brush line.** A smooth round brush
+   follows the pen along the guide path — always solid, including through
+   self-crossings and junctions. Nothing else appears around the pen: no
+   partial fills, no seams. The brush is configurable (see below).
 
-2. **Monotonic arc-length progress.** Pointer input is matched to the guide
+2. **On the last stroke's completion, the whole glyph fills** with a smooth
+   fade — the finished letter is pixel-identical to the printed letterform
+   (ink is always clipped to the glyph outline, so its edges come from the
+   font geometry).
+
+3. **Monotonic arc-length progress.** Pointer input is matched to the guide
    path only inside a small window ahead of current progress, with a per-event
    advance cap. You cannot skip across the letter, jump to the end, or scrub
    backwards — the stroke must be travelled in order, in the right direction.
-   Tolerance scales with the local limb radius.
 
-Letters without an outline (legacy recorder data) fall back to corridor
-painting along the guide path.
+**Brush settings** — the Studio's *Brush* panel controls how the trace
+draws: *Follow letter* (brush tracks the limb thickness) or *Fixed* (one
+constant width per stroke, like a marker), plus a width slider (50–200 %).
+Settings apply live, persist in the browser, and are exported as a
+top-level `"brush"` object in `letters.json`, which the tracer (and your
+app) picks up automatically.
+
+Letters without an outline (legacy recorder data) simply keep the brush
+corridors as the final look.
 
 Game feel: numbered start badges, animated dashed guide with direction
 chevrons, idle hint dot, off-path ring + haptic feedback, per-stroke progress
