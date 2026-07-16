@@ -1,27 +1,7 @@
 # Tibetan Alphabet Letter Tracing
 
-Game-grade stroke tracing for Tibetan script, with fully automatic
-stroke-data generation from the font glyphs themselves. Letters are grouped
-into 7 categories, opened from a category picker in the tracer:
-
-| Category | Count | Letters |
-|---|---|---|
-| Consonants | 30 | ཀ – ཨ |
-| Vowel Signs | 4 | ི ུ ེ ོ |
-| Prefix Letters | 5 | ག ད བ མ འ |
-| Superscribed Letters | 3 | ར ལ ས |
-| Subscribed Letters | 4 | ྱ ྲ ླ ྭ |
-| Suffix Letters | 10 | ག ང ད ན བ མ འ ར ལ ས |
-| Second Suffixes | 2 | ད ས |
-
-Prefix, Superscribed, Suffix and Second Suffix letters reuse the same
-glyph/stroke data as the matching root consonant (tagged with a `roles`
-array in `letters.json`) rather than duplicating tracing content — they're
-the same shape in a different grammatical position. Vowel Signs and
-Subscribed Letters are distinct glyphs with their own outline + stroke
-data. Per-category JSON exports (one file per category, each a
-self-contained `{version, viewBox, letters}` document) live in
-[`categories/`](categories/).
+Game-grade stroke tracing for all 30 Tibetan consonants (ཀ – ཨ), with fully
+automatic stroke-data generation from the font glyphs themselves.
 
 - **[Stroke Studio](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)** — edit strokes AND trace them **side by side, live**; export letters.json from the same page
 - **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)** — the standalone tracing game
@@ -69,7 +49,7 @@ node generate-strokes.cjs --only ka,kha
 ```
 
 The generator prints an ink-coverage percentage per letter (how much of the
-glyph the stroke corridors cover) — all 38 letters sit at 99.5 – 100 %.
+glyph the stroke corridors cover) — all 30 letters sit at 99.5 – 100 %.
 
 ### 2. Tracing engine (`trace-core.js`, used by the Studio and `stroke-trace.html`)
 
@@ -151,8 +131,6 @@ remembered across reloads until you press *Use built-in letters*.
       "glyph": "ཀ",
       "roman": "ka",
       "order": 1,
-      "category": "consonant",      // consonant | vowelSign | subscribed
-      "roles": ["prefix", "suffix"],// extra grammatical roles (may be empty)
       "outline": "M758.0 40.0 …Z",  // exact glyph outline (SVG path data)
       "strokes": [
         {
@@ -162,17 +140,11 @@ remembered across reloads until you press *Use built-in letters*.
         }
       ]
     }
-  ],
-  "categories": [
-    { "id": "consonants", "label": "Consonants", "count": 30, "letters": [ /* {id, glyph, roman, available} */ ] }
-    // … one entry per category, see the table above
   ]
 }
 ```
 
 `letters.js` is the same document as `window.LETTERS_DATA` for file:// use.
-`categories/*.json` are per-category exports (regenerate with the same
-scripts used to build them — see `Repo map` below).
 
 ## Using the data in your own app
 
@@ -194,11 +166,9 @@ Per stroke, the render/validate recipe is:
 | `index.html` | **Stroke Studio** — anchor editor + live tracer side by side |
 | `trace-core.js` | shared tracing engine (region reveal + validation + game feel) |
 | `generate-strokes.cjs` | automatic stroke extraction (the algorithm above) |
-| `export-categories.cjs` | rebuilds `categories` in letters.json/js + `categories/*.json` from each letter's `category`/`roles` tags |
 | `refine.js` | geometry primitives (path parsing, rasterizer, EDT, contours) |
-| `letters.json` / `letters.js` | generated stroke data for all 38 letters across 7 categories |
-| `categories/*.json` | one self-contained JSON export per category |
-| `stroke-trace.html` | the standalone tracing game — opens on a category picker |
+| `letters.json` / `letters.js` | generated stroke data for all 30 consonants |
+| `stroke-trace.html` | the standalone tracing game |
 | `strokes-preview.svg` | QA grid of every letter's strokes (run with `--preview`) |
 | `editor.html` | redirect to the Studio (kept for old links) |
 | `recorder.html` | legacy manual stroke recorder |
