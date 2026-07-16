@@ -8,17 +8,21 @@ into 7 categories, opened from a category picker in the tracer:
 |---|---|---|
 | Consonants | 30 | 30 |
 | Vowel Signs | 4 | 0 — glyphs listed, tracing data not added yet |
-| Prefix Letters | 5 | 5 (same strokes as the matching consonant) |
-| Superscribed Letters | 3 | 3 (same strokes as the matching consonant) |
+| Prefix Letters | 5 | 0 — glyphs listed, tracing data not added yet |
+| Superscribed Letters | 3 | 0 — glyphs listed, tracing data not added yet |
 | Subscribed Letters | 4 | 0 — glyphs listed, tracing data not added yet |
-| Suffix Letters | 10 | 10 (same strokes as the matching consonant) |
-| Second Suffixes | 2 | 2 (same strokes as the matching consonant) |
+| Suffix Letters | 10 | 0 — glyphs listed, tracing data not added yet |
+| Second Suffixes | 2 | 0 — glyphs listed, tracing data not added yet |
 
-A category with 0 traceable letters still lists its glyphs (shown locked in
-the picker); open it in the **Stroke Studio** to draw and save strokes for
-them the same way the consonants were made. Per-category JSON exports live
-in [`categories/`](categories/) — regenerate everything with
-`node export-categories.cjs` after editing `letters.json`.
+Each category is a fully separate, independent set of letter entries — even
+where a category's letters are the same Tibetan characters as some of the
+Consonants (e.g. Prefix Letters includes "ga"), they are **not** shared or
+copied; every entry has its own `id` and its own (currently empty)
+`outline`/`strokes`. A category with 0 traceable letters still lists its
+glyphs (shown locked in the picker); open one in the **Stroke Studio** to
+draw and save its strokes, same workflow used for the Consonants. Per-category
+JSON exports live in [`categories/`](categories/) — regenerate everything
+with `node export-categories.cjs` after editing `letters.json`.
 
 - **[Stroke Studio](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)** — edit strokes AND trace them **side by side, live**; export letters.json from the same page
 - **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)** — the standalone tracing game, opens on the category picker
@@ -167,12 +171,12 @@ remembered across reloads until you press *Use built-in letters*.
 }
 ```
 
-Prefix/Superscribed/Suffix/Second-Suffix letters are separate entries with
-their own `id` (e.g. `prefix_ga`) but duplicate the `outline`/`strokes` of
-the matching consonant — same shape, different grammatical role, no new
-tracing content generated. Vowel Signs and Subscribed Letters are distinct
-glyphs with `available: false` and empty `strokes` until real tracing data
-is added (in the Studio, same as any other letter).
+Every non-Consonant category (Vowel Signs, Prefix, Superscribed, Subscribed,
+Suffix, Second Suffix) is its own independent set of entries with their own
+`id` (e.g. `prefix_ga`), `available: false`, and empty `strokes`/`outline: null`
+— nothing is shared or copied from the Consonants, even when the underlying
+character is the same. Add real tracing data for any of them in the Studio,
+same as any other letter.
 
 `letters.js` is the same document as `window.LETTERS_DATA` for file:// use.
 `categories/*.json` are per-category exports — see `export-categories.cjs`.
