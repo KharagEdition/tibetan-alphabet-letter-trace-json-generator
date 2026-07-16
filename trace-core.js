@@ -101,6 +101,8 @@
         glyph: L.glyph || L.id || '?',
         roman: L.roman || L.name || L.id || '',
         order: L.order != null ? L.order : out.length + 1,
+        category: L.category || null,
+        roles: Array.isArray(L.roles) ? L.roles : [],
         outline: L.outline || null,
         strokes
       });
