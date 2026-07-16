@@ -8,10 +8,7 @@ automatic stroke-data generation from the font glyphs themselves.
 - **[Stroke Recorder](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/recorder.html)** — optional manual recorder (legacy)
 ## Preview
 
-<img height="415" alt="Tracing" src="https://github.com/user-attachments/assets/135d167b-3b73-422d-82c5-d7aaf124f96b" />
-
-<img width="400" alt="Stroke" src="https://github.com/user-attachments/assets/a01e54e3-5076-496c-bd58-c0eee2a59772" />
-
+<img width="800" height="590" alt="ScreenRecording2026-07-16at1 51 45PM-ezgif com-video-to-gif-converter" src="https://github.com/user-attachments/assets/bba973fb-9187-4296-a1f1-bb550fa6f6eb" />
 
 
 ## How it works
