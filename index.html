@@ -185,6 +185,11 @@
         <button class="small" id="btnToggleType">Make corner</button>
         <button class="small danger" id="btnDelPoint">Delete point</button>
       </div>
+      <div id="pointWidthRow" style="margin-top:8px;display:none;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--muted)">Width</span>
+        <input type="range" id="pointWidth" min="30" max="300" value="100" step="5" style="flex:1;accent-color:var(--accent)">
+        <span id="pointWidthVal" style="font-size:12px;color:var(--muted);min-width:38px;text-align:right">100%</span>
+      </div>
     </div>
 
     <div>
@@ -197,10 +202,10 @@
     </div>
 
     <div>
-      <h4>Brush <span style="color:var(--muted)">(how the trace draws)</span></h4>
+      <h4>Brush — <span id="brushStrokeLab" style="color:var(--accent)">stroke 1</span> <span style="color:var(--muted)">(how it traces)</span></h4>
       <div class="row" style="margin-top:6px">
         <button class="small on" id="brushFollow" title="brush follows the letter's limb thickness">〰 Follow letter</button>
-        <button class="small" id="brushFixed" title="one constant width per stroke — a plain marker line">— Fixed</button>
+        <button class="small" id="brushFixed" title="one constant width for this stroke — a plain marker line">— Fixed</button>
       </div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:11px;color:var(--muted)">Width</span>
@@ -319,19 +324,25 @@ function catmull(p0, p1, p2, p3, t) {
   };
 }
 
+/* sample the anchor path; each sample carries m = the per-point width
+   multiplier interpolated between the anchors' w values */
 function samplePath(anchors) {
-  if (anchors.length < 2) return anchors.map(a => ({ x: a.x, y: a.y }));
-  const out = [{ x: anchors[0].x, y: anchors[0].y }];
+  const aw = a => (a.w == null ? 1 : a.w);
+  if (anchors.length < 2) return anchors.map(a => ({ x: a.x, y: a.y, m: aw(a) }));
+  const out = [{ x: anchors[0].x, y: anchors[0].y, m: aw(anchors[0]) }];
   for (let i = 0; i < anchors.length - 1; i++) {
     const p1 = anchors[i], p2 = anchors[i + 1];
     const straight = p1.c && p2.c;
     const p0 = (i > 0 && !p1.c) ? anchors[i - 1] : p1;
     const p3 = (i < anchors.length - 2 && !p2.c) ? anchors[i + 2] : p2;
     const n = Math.max(2, Math.round(dist2(p1, p2) / 7));
+    const w1 = aw(p1), w2 = aw(p2);
     for (let k = 1; k <= n; k++) {
       const t = k / n;
-      out.push(straight ? { x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t }
-                        : catmull(p0, p1, p2, p3, t));
+      const q = straight ? { x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t }
+                         : catmull(p0, p1, p2, p3, t);
+      q.m = w1 + (w2 - w1) * t;
+      out.push(q);
     }
   }
   return out;
@@ -376,26 +387,58 @@ const engine = window.__engine = new TC.TraceEngine(trStage, {
   }
 });
 
-/* ---------------- brush settings (global, saved + exported) ---------------- */
-let brush = TC.normalizeBrush((() => {
-  try { const b = JSON.parse(localStorage.getItem('studio_brush_v1')); if (b) return b; } catch (e) {}
-  return doc.brush || (window.LETTERS_DATA && window.LETTERS_DATA.brush) || null;
-})());
-
-function applyBrush(save = true) {
-  engine.setBrush(brush);
-  document.getElementById('brushFollow').classList.toggle('on', brush.mode === 'follow');
-  document.getElementById('brushFixed').classList.toggle('on', brush.mode === 'fixed');
-  const pct = Math.round(brush.widthScale * 100);
+/* ---------------- per-stroke brush + per-point width ----------------
+   Every stroke owns its brush {mode, widthScale}; every anchor may carry
+   a width multiplier w. All of it is BAKED into the exported radii, so
+   the tracer and the app replay the exact look with no runtime settings. */
+const defBrush = () => ({ mode: 'follow', widthScale: 1 });
+function curBrush() {
+  const s = strokesA[cs];
+  if (!s.brush) s.brush = defBrush();
+  return s.brush;
+}
+function syncBrushUI() {
+  if (!strokesA.length) return;
+  const b = curBrush();
+  document.getElementById('brushStrokeLab').textContent = 'stroke ' + (cs + 1);
+  document.getElementById('brushFollow').classList.toggle('on', b.mode === 'follow');
+  document.getElementById('brushFixed').classList.toggle('on', b.mode === 'fixed');
+  const pct = Math.round(b.widthScale * 100);
   document.getElementById('brushWidth').value = pct;
   document.getElementById('brushWidthVal').textContent = pct + '%';
-  if (save) { try { localStorage.setItem('studio_brush_v1', JSON.stringify(brush)); } catch (e) {} }
-  if (typeof field !== 'undefined' && letter) render();   // editor preview mirrors the brush
 }
-document.getElementById('brushFollow').onclick = () => { brush.mode = 'follow'; applyBrush(); };
-document.getElementById('brushFixed').onclick = () => { brush.mode = 'fixed'; applyBrush(); };
+function syncPointUI() {
+  const a = (selA >= 0 && strokesA[cs]) ? strokesA[cs].anchors[selA] : null;
+  document.getElementById('btnToggleType').textContent = a && a.c ? 'Make curve' : 'Make corner';
+  const row = document.getElementById('pointWidthRow');
+  row.style.display = a ? 'flex' : 'none';
+  if (a) {
+    const pct = Math.round((a.w == null ? 1 : a.w) * 100);
+    document.getElementById('pointWidth').value = pct;
+    document.getElementById('pointWidthVal').textContent = pct + '%';
+  }
+}
+document.getElementById('brushFollow').onclick = () => {
+  snapshot(); curBrush().mode = 'follow';
+  commit(); syncBrushUI(); render();
+};
+document.getElementById('brushFixed').onclick = () => {
+  snapshot(); curBrush().mode = 'fixed';
+  commit(); syncBrushUI(); render();
+};
+document.getElementById('brushWidth').addEventListener('pointerdown', () => snapshot());
 document.getElementById('brushWidth').oninput = e => {
-  brush.widthScale = e.target.value / 100; applyBrush();
+  curBrush().widthScale = e.target.value / 100;
+  document.getElementById('brushWidthVal').textContent = e.target.value + '%';
+  commit(); render();
+};
+document.getElementById('pointWidth').addEventListener('pointerdown', () => snapshot());
+document.getElementById('pointWidth').oninput = e => {
+  const a = (selA >= 0 && strokesA[cs]) ? strokesA[cs].anchors[selA] : null;
+  if (!a) return;
+  a.w = e.target.value / 100;
+  document.getElementById('pointWidthVal').textContent = e.target.value + '%';
+  commit(); render();
 };
 
 let syncTimer = 0;
@@ -442,7 +485,10 @@ function loadLetterIdx(i) {
   glyphPath = letter.outline ? new Path2D(letter.outline) : null;
   field = buildField(letter.outline);
   strokesA = (letter.strokes || []).map(s =>
-    ({ anchors: s.anchors ? s.anchors.map(a => ({ ...a })) : anchorsFromPoints(s.points) }));
+    ({
+      anchors: s.anchors ? s.anchors.map(a => ({ ...a })) : anchorsFromPoints(s.points),
+      brush: s.brush ? { mode: s.brush.mode === 'fixed' ? 'fixed' : 'follow', widthScale: +s.brush.widthScale || 1 } : defBrush()
+    }));
   if (!strokesA.length) strokesA = [{ anchors: [] }];
   cs = 0; selA = -1; undoStack = [];
   document.getElementById('hGlyph').textContent = letter.glyph;
@@ -465,26 +511,41 @@ function undo() {
   commit(false); buildList(); render();
 }
 
-/* rebuild letter.strokes from anchors, persist, and sync the tracer */
+/* rebuild letter.strokes from anchors — baking each stroke's brush and
+   the anchors' width multipliers into the radii — persist, sync tracer */
 function commit(mark = true) {
+  const round1 = v => Math.round(v * 10) / 10;
+  const round2 = v => Math.round(v * 100) / 100;
   const out = [];
   for (const s of strokesA) {
     if (s.anchors.length < 2) continue;
+    const b = s.brush || defBrush();
     let pts = samplePath(s.anchors);
-    pts = pts.map(p => insideVB(p.x, p.y) ? p : (clampInside(p.x, p.y) || p));
+    pts = pts.map(p => {
+      if (insideVB(p.x, p.y)) return p;
+      const q = clampInside(p.x, p.y);
+      return q ? { x: q.x, y: q.y, m: p.m } : p;
+    });
     // uniform ~12 px spacing
     const res = [pts[0]]; let acc = 0;
     for (let i = 1; i < pts.length; i++) {
       acc += dist2(pts[i - 1], pts[i]);
       if (acc >= 12 || i === pts.length - 1) { res.push(pts[i]); acc = 0; }
     }
-    const rr = res.map(p => Math.round(radiusVB(p.x, p.y) * 10) / 10);
-    const sorted = rr.slice().sort((a, b) => a - b);
+    const base = res.map(p => radiusVB(p.x, p.y));
+    const sortedB = base.slice().sort((x, y) => x - y);
+    const medB = sortedB[sortedB.length >> 1] || 30;
+    const rr = res.map((p, i) =>
+      round1((b.mode === 'fixed' ? medB : base[i]) * b.widthScale * (p.m == null ? 1 : p.m)));
     out.push({
-      points: res.map(p => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]),
+      points: res.map(p => [round1(p.x), round1(p.y)]),
       radii: rr,
-      width: Math.round(2 * sorted[sorted.length >> 1] * 10) / 10,
-      anchors: s.anchors.map(a => ({ x: Math.round(a.x * 10) / 10, y: Math.round(a.y * 10) / 10, c: a.c ? 1 : 0 }))
+      width: round1(2 * medB * b.widthScale),
+      brush: { mode: b.mode, widthScale: round2(b.widthScale) },
+      anchors: s.anchors.map(a => ({
+        x: round1(a.x), y: round1(a.y), c: a.c ? 1 : 0,
+        w: round2(a.w == null ? 1 : a.w)
+      }))
     });
   }
   letter.strokes = out;
@@ -537,12 +598,14 @@ function render() {
     const current = k === cs;
 
     if (current && field) {
-      /* corridor preview drawn with the SAME brush settings as the tracer */
+      /* corridor preview drawn with THIS STROKE's brush + point widths —
+         exactly what the tracer will draw */
+      const b = s.brush || defBrush();
       let fixedR = 0;
-      if (brush.mode === 'fixed') {
+      if (b.mode === 'fixed') {
         const rs = [];
         for (let i = 0; i < pts.length; i += 2) rs.push(radiusVB(pts[i].x, pts[i].y));
-        rs.sort((a, b) => a - b);
+        rs.sort((x, y) => x - y);
         fixedR = rs[rs.length >> 1] || 30;
       }
       ctx.save();
@@ -551,7 +614,8 @@ function render() {
       ctx.fillStyle = col;
       for (let i = 0; i < pts.length; i += 2) {
         const p = pts[i];
-        const r = (brush.mode === 'fixed' ? fixedR : radiusVB(p.x, p.y)) * 1.3 * brush.widthScale;
+        const r = (b.mode === 'fixed' ? fixedR : radiusVB(p.x, p.y))
+          * 1.3 * b.widthScale * (p.m == null ? 1 : p.m);
         ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fill();
       }
       ctx.globalAlpha = 1;
@@ -639,7 +703,7 @@ stage.addEventListener('pointerdown', e => {
   if (!s) return;
 
   const ai = hitAnchor(p);
-  if (ai >= 0) { selA = ai; dragging = true; snapshot(); render(); syncTypeBtn(); return; }
+  if (ai >= 0) { selA = ai; dragging = true; snapshot(); render(); syncPointUI(); return; }
 
   const seg = hitSegment(p);
   if (seg >= 0) {                       // insert a point on the path
@@ -678,7 +742,7 @@ stage.addEventListener('dblclick', e => {
   const a = strokesA[cs].anchors[ai];
   a.c = a.c ? 0 : 1;
   selA = ai;
-  commit(); render(); syncTypeBtn();
+  commit(); render(); syncPointUI();
 });
 
 window.addEventListener('keydown', e => {
@@ -725,11 +789,8 @@ function buildList() {
     d.onclick = () => { cs = k; selA = -1; buildList(); render(); };
     el.appendChild(d);
   });
-}
-
-function syncTypeBtn() {
-  const a = selA >= 0 && strokesA[cs] ? strokesA[cs].anchors[selA] : null;
-  document.getElementById('btnToggleType').textContent = a && a.c ? 'Make curve' : 'Make corner';
+  syncBrushUI();
+  syncPointUI();
 }
 
 document.getElementById('btnToggleType').onclick = () => {
@@ -737,14 +798,15 @@ document.getElementById('btnToggleType').onclick = () => {
   snapshot();
   const a = strokesA[cs].anchors[selA];
   a.c = a.c ? 0 : 1;
-  commit(); render(); syncTypeBtn();
+  commit(); render(); syncPointUI();
 };
 document.getElementById('btnDelPoint').onclick = delSelected;
 document.getElementById('btnAddStroke').onclick = () => {
   snapshot();
-  strokesA.push({ anchors: [] });
+  const inherit = strokesA[cs] && strokesA[cs].brush ? { ...strokesA[cs].brush } : defBrush();
+  strokesA.push({ anchors: [], brush: inherit });
   cs = strokesA.length - 1; selA = -1;
-  buildList(); render();
+  buildList(); render(); syncBrushUI(); syncPointUI();
   toast('Click inside the letter to place the first point');
 };
 document.getElementById('btnUndo').onclick = undo;
@@ -766,7 +828,7 @@ document.getElementById('btnRevert').onclick = () => {
 /* ---------------- output ---------------- */
 function exportDoc() {
   commit(false);
-  doc.brush = { ...brush };   // ship the brush look with the data
+  delete doc.brush;   // brush is per-stroke now, baked into each stroke's radii
   return JSON.stringify(doc, null, 1);
 }
 function download(name, text) {
@@ -835,7 +897,6 @@ if (!window.LETTERS_DATA || !SR || !TC) {
   document.body.innerHTML = '<p style="margin:40px">letters.js / refine.js / trace-core.js missing.</p>';
 } else {
   fit();
-  applyBrush(false);
   loadLetterIdx(0);
 }
 </script>
