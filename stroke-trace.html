@@ -114,22 +114,19 @@
   .lcell .g { font-size: 30px; line-height: 1.25; }
   .lcell .r { font-size: 11px; color: var(--muted); font-weight: 600; }
   .lcell .done-mark { color: var(--good); font-size: 11px; font-weight: 700; }
-  .lcell.locked { opacity: .45; cursor: default; }
-  .lcell.locked:hover { border-color: var(--line); }
-  .lcell .lock-mark { font-size: 11px; }
 
   /* completion overlay */
-  .celebrate, .comingsoon {
+  .celebrate {
     position: absolute; inset: 0; z-index: 20;
     display: none; align-items: center; justify-content: center; flex-direction: column;
     gap: 12px; border-radius: var(--radius);
     background: rgba(10,15,26,.55); backdrop-filter: blur(3px);
     animation: fadeIn .3s;
   }
-  .celebrate.open, .comingsoon.open { display: flex; }
-  .celebrate .big, .comingsoon .big { font-size: 120px; line-height: 1.1; filter: drop-shadow(0 8px 30px rgba(79,141,253,.45)); animation: pop .5s cubic-bezier(.2,1.8,.4,1); }
-  .celebrate .msg, .comingsoon .msg { font-size: 20px; font-weight: 700; }
-  .celebrate .sub, .comingsoon .sub { font-size: 14px; color: var(--muted); }
+  .celebrate.open { display: flex; }
+  .celebrate .big { font-size: 120px; line-height: 1.1; filter: drop-shadow(0 8px 30px rgba(79,141,253,.45)); animation: pop .5s cubic-bezier(.2,1.8,.4,1); }
+  .celebrate .msg { font-size: 20px; font-weight: 700; }
+  .celebrate .sub { font-size: 14px; color: var(--muted); }
   @keyframes pop { 0% { transform: scale(.3); } 100% { transform: scale(1); } }
   @keyframes fadeIn { from { opacity: 0; } }
 
@@ -140,100 +137,47 @@
     opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 40;
   }
   .toast.show { opacity: 1; }
-
-  /* category home screen */
-  #homeView {
-    width: 100%; max-width: 720px; flex: 1; min-height: 0;
-    display: flex; flex-direction: column;
-    padding: 18px 16px 14px;
-    overflow-y: auto;
-  }
-  #homeView.hidden { display: none; }
-  .home-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-  .home-head h1 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
-  .home-head p { color: var(--muted); font-size: 13px; margin-top: 2px; }
-  .cat-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px; margin-top: 16px;
-  }
-  .cat-card {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
-    padding: 14px; cursor: pointer; text-align: left;
-    transition: border-color .15s, transform .1s, background .15s;
-    display: flex; flex-direction: column; gap: 8px;
-  }
-  .cat-card:hover { border-color: var(--accent); }
-  .cat-card:active { transform: scale(.98); }
-  .cat-card .sample { font-size: 26px; line-height: 1; color: var(--text); letter-spacing: 2px; }
-  .cat-card .label { font-size: 14px; font-weight: 700; }
-  .cat-card .meta { font-size: 12px; color: var(--muted); font-weight: 600; }
-  .cat-card .bar { height: 5px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
-  .cat-card .bar > div { height: 100%; background: var(--good); border-radius: 3px; }
-  #traceView { width: 100%; display: flex; flex-direction: column; align-items: center; flex: 1; min-height: 0; }
-  #traceView.hidden { display: none; }
 </style>
 </head>
 <body>
 
-<div id="homeView">
-  <div class="home-head">
-    <div>
-      <h1>Tibetan Letter Tracing</h1>
-      <p>Pick a category to start tracing</p>
-    </div>
-    <div class="hbtns">
-      <button class="icon" id="btnLoadHome" title="Load custom JSON">📂</button>
-      <button class="icon" onclick="location.href='index.html'" title="Stroke studio (edit + trace)">✎</button>
-    </div>
+<header>
+  <div class="title">
+    <div class="glyph" id="hGlyph">ཀ</div>
+    <div class="roman" id="hRoman">ka</div>
   </div>
-  <div class="cat-grid" id="catGrid"></div>
+  <div class="hbtns">
+    <button class="icon" id="btnHint"  title="Show me">👁</button>
+    <button class="icon" id="btnReset" title="Start over">↺</button>
+    <button class="icon" id="btnLoad"  title="Load custom JSON">📂</button>
+    <button class="icon" onclick="location.href='index.html'" title="Stroke studio (edit + trace)">✎</button>
+    <button class="icon" id="btnGrid"  title="All letters">▦</button>
+  </div>
+</header>
+
+<div class="stage-wrap">
+  <canvas id="stage"></canvas>
+  <div class="celebrate" id="celebrate">
+    <div class="big" id="cGlyph">ཀ</div>
+    <div class="msg">Perfect! ✨</div>
+    <div class="sub" id="cSub">ka</div>
+    <button class="primary" id="btnNext2">Next letter →</button>
+  </div>
 </div>
 
-<div id="traceView" class="hidden">
-  <header>
-    <div class="title">
-      <div class="glyph" id="hGlyph">ཀ</div>
-      <div class="roman" id="hRoman">ka</div>
-    </div>
-    <div class="hbtns">
-      <button class="icon" id="btnHome"  title="All categories">⌂</button>
-      <button class="icon" id="btnHint"  title="Show me">👁</button>
-      <button class="icon" id="btnReset" title="Start over">↺</button>
-      <button class="icon" id="btnLoad"  title="Load custom JSON">📂</button>
-      <button class="icon" onclick="location.href='index.html'" title="Stroke studio (edit + trace)">✎</button>
-      <button class="icon" id="btnGrid"  title="Letters in this category">▦</button>
-    </div>
-  </header>
+<div class="strokebar" id="strokebar"></div>
 
-  <div class="stage-wrap">
-    <canvas id="stage"></canvas>
-    <div class="celebrate" id="celebrate">
-      <div class="big" id="cGlyph">ཀ</div>
-      <div class="msg">Perfect! ✨</div>
-      <div class="sub" id="cSub">ka</div>
-      <button class="primary" id="btnNext2">Next letter →</button>
-    </div>
-    <div class="comingsoon" id="comingSoon">
-      <div class="big" id="csGlyph">ཀ</div>
-      <div class="msg">Tracing not added yet</div>
-      <div class="sub" id="csSub">This letter's guide strokes aren't ready</div>
-    </div>
+<footer>
+  <div class="nav-arrows">
+    <button id="btnPrev">←</button>
+    <button id="btnNext">→</button>
   </div>
-
-  <div class="strokebar" id="strokebar"></div>
-
-  <footer>
-    <div class="nav-arrows">
-      <button id="btnPrev">←</button>
-      <button id="btnNext">→</button>
-    </div>
-    <div style="color:var(--muted);font-size:13px;font-weight:600" id="footInfo"></div>
-  </footer>
-</div>
+  <div style="color:var(--muted);font-size:13px;font-weight:600" id="footInfo"></div>
+</footer>
 
 <div class="sheet" id="sheet">
   <div class="sheet-card">
-    <h3 id="sheetTitle">Choose a letter</h3>
+    <h3>Choose a letter</h3>
     <div class="lgrid" id="lgrid"></div>
   </div>
 </div>
@@ -277,37 +221,10 @@
 
 const TC = window.TraceCore;
 
-/* ---- categories: groups the flat letter list by grammatical role.
-   Each letter carries its own `category`; letters with no strokes yet
-   (`available: false`) still show up so the category is fully listed,
-   they just can't be opened in the tracer until data is added. */
-const CATEGORY_DEFS = [
-  { id: 'consonants',     label: 'Consonants',           match: L => L.category === 'consonant' },
-  { id: 'vowelSigns',     label: 'Vowel Signs',          match: L => L.category === 'vowelSign' },
-  { id: 'prefixes',       label: 'Prefix Letters',       match: L => L.category === 'prefix' },
-  { id: 'superscribed',   label: 'Superscribed Letters', match: L => L.category === 'superscribed' },
-  { id: 'subscribed',     label: 'Subscribed Letters',   match: L => L.category === 'subscribed' },
-  { id: 'suffixes',       label: 'Suffix Letters',       match: L => L.category === 'suffix' },
-  { id: 'secondSuffixes', label: 'Second Suffixes',      match: L => L.category === 'secondSuffix' }
-];
-
-function buildCategories(letters) {
-  const cats = CATEGORY_DEFS
-    .map(def => ({ id: def.id, label: def.label, letters: letters.filter(def.match) }))
-    .filter(c => c.letters.length);
-  if (!cats.length && letters.length) {
-    // custom data with no category metadata: fall back to one flat category
-    cats.push({ id: 'all', label: 'All Letters', letters });
-  }
-  return cats;
-}
-
 const BUILTIN = (() => {
   try { return TC.normalizeDoc(window.LETTERS_DATA); } catch (e) { return []; }
 })();
 const BUILTIN_BRUSH = TC.normalizeBrush(window.LETTERS_DATA && window.LETTERS_DATA.brush);
-let ALL_LETTERS = BUILTIN;
-let CATEGORIES = buildCategories(ALL_LETTERS);
 let LETTERS = BUILTIN;
 let activeBrush = BUILTIN_BRUSH;
 let usingCustom = false;
@@ -315,9 +232,7 @@ try {
   const saved = localStorage.getItem('trace_custom_data');
   if (saved) {
     const parsed = JSON.parse(saved);
-    ALL_LETTERS = TC.normalizeDoc(parsed);
-    CATEGORIES = buildCategories(ALL_LETTERS);
-    LETTERS = ALL_LETTERS;
+    LETTERS = TC.normalizeDoc(parsed);
     activeBrush = TC.normalizeBrush(parsed.brush || BUILTIN_BRUSH);
     usingCustom = true;
   }
@@ -326,7 +241,6 @@ try {
 const stage = document.getElementById('stage');
 let cur = 0;
 let letter = null;
-let activeCategory = null;
 const doneSet = new Set(JSON.parse(localStorage.getItem('trace_done_v2') || '[]'));
 
 const engine = window.__engine = new TC.TraceEngine(stage, {
@@ -349,45 +263,15 @@ function fit() {
 }
 window.addEventListener('resize', fit);
 
-/* find the next/previous AVAILABLE (traceable) letter index, wrapping
-   around; returns -1 if none in LETTERS are available */
-function nextAvailable(from, dir) {
-  const n = LETTERS.length;
-  for (let k = 1; k <= n; k++) {
-    const i = (from + dir * k + n * n) % n;
-    if (LETTERS[i].available) return i;
-  }
-  return -1;
-}
-
 function loadLetter(i) {
-  if (!LETTERS.length) return;
-  i = (i + LETTERS.length) % LETTERS.length;
-  if (!LETTERS[i].available) { i = nextAvailable(i, 1); if (i === -1) { showComingSoon(); return; } }
-  cur = i;
+  cur = (i + LETTERS.length) % LETTERS.length;
   letter = LETTERS[cur];
   document.getElementById('hGlyph').textContent = letter.glyph;
   document.getElementById('hRoman').textContent = letter.roman || letter.id;
   document.getElementById('footInfo').textContent =
-    (activeCategory ? activeCategory.label + ' · ' : '') +
     `${cur + 1} / ${LETTERS.length}` + (usingCustom ? ' · custom' : '');
   document.getElementById('celebrate').classList.remove('open');
-  document.getElementById('comingSoon').classList.remove('open');
   engine.setLetter(letter);
-  buildGridSel();
-}
-
-function showComingSoon() {
-  letter = null;
-  document.getElementById('hGlyph').textContent = (activeCategory && activeCategory.letters[0] && activeCategory.letters[0].glyph) || '·';
-  document.getElementById('hRoman').textContent = activeCategory ? activeCategory.label : '';
-  document.getElementById('footInfo').textContent =
-    (activeCategory ? activeCategory.label + ' · ' : '') + 'not traceable yet';
-  document.getElementById('celebrate').classList.remove('open');
-  engine.setLetter(null);
-  document.getElementById('csGlyph').textContent = document.getElementById('hGlyph').textContent;
-  document.getElementById('csSub').textContent = 'Guide strokes for this category haven’t been added yet';
-  document.getElementById('comingSoon').classList.add('open');
   buildGridSel();
 }
 
@@ -401,91 +285,37 @@ function buildStrokebar(si, total, finished) {
   }
 }
 
-/* ============================ category home ============================ */
-function renderHome() {
-  const grid = document.getElementById('catGrid');
-  grid.innerHTML = '';
-  CATEGORIES.forEach(cat => {
-    const avail = cat.letters.filter(L => L.available);
-    const done = avail.filter(L => doneSet.has(L.id)).length;
-    const pct = avail.length ? Math.round(100 * done / avail.length) : 0;
-    const card = document.createElement('div');
-    card.className = 'cat-card';
-    const meta = avail.length
-      ? `${done} / ${avail.length} traced` + (avail.length < cat.letters.length ? ` · ${cat.letters.length} total` : '')
-      : `${cat.letters.length} letter${cat.letters.length > 1 ? 's' : ''} · coming soon`;
-    card.innerHTML =
-      `<div class="sample">${cat.letters.slice(0, 4).map(L => L.glyph).join(' ')}</div>` +
-      `<div class="label">${cat.label}</div>` +
-      `<div class="meta">${meta}</div>` +
-      `<div class="bar"><div style="width:${pct}%"></div></div>`;
-    card.onclick = () => enterCategory(cat);
-    grid.appendChild(card);
-  });
-}
-
-function enterCategory(cat) {
-  activeCategory = cat;
-  LETTERS = cat.letters;
-  showTrace();
-  const first = LETTERS.findIndex(L => L.available);
-  if (first === -1) showComingSoon(); else loadLetter(first);
-}
-
-function showHome() {
-  renderHome();
-  document.getElementById('homeView').classList.remove('hidden');
-  document.getElementById('traceView').classList.add('hidden');
-}
-function showTrace() {
-  document.getElementById('homeView').classList.add('hidden');
-  document.getElementById('traceView').classList.remove('hidden');
-  fit();
-}
-document.getElementById('btnHome').onclick = showHome;
-
 /* ============================ chrome ============================ */
 function buildGrid() {
   const grid = document.getElementById('lgrid');
   grid.innerHTML = '';
   LETTERS.forEach((L, i) => {
     const c = document.createElement('div');
-    c.className = 'lcell' + (i === cur && L.available ? ' sel' : '') + (L.available ? '' : ' locked');
+    c.className = 'lcell' + (i === cur ? ' sel' : '');
     c.innerHTML = `<div class="g">${L.glyph}</div><div class="r">${L.roman || L.id}</div>` +
-      (L.available ? (doneSet.has(L.id) ? '<div class="done-mark">✓</div>' : '')
-                    : '<div class="lock-mark">🔒</div>');
-    c.onclick = () => {
-      if (!L.available) { toast('Tracing not added yet for this letter'); return; }
-      document.getElementById('sheet').classList.remove('open');
-      loadLetter(i);
-    };
+      (doneSet.has(L.id) ? '<div class="done-mark">✓</div>' : '');
+    c.onclick = () => { document.getElementById('sheet').classList.remove('open'); loadLetter(i); };
     grid.appendChild(c);
   });
 }
 function buildGridSel() { if (document.getElementById('sheet').classList.contains('open')) buildGrid(); }
 
-document.getElementById('btnGrid').onclick = () => {
-  document.getElementById('sheetTitle').textContent = activeCategory ? activeCategory.label : 'Choose a letter';
-  buildGrid();
-  document.getElementById('sheet').classList.add('open');
-};
+document.getElementById('btnGrid').onclick = () => { buildGrid(); document.getElementById('sheet').classList.add('open'); };
 document.getElementById('sheet').addEventListener('click', e => {
   if (e.target === document.getElementById('sheet')) e.currentTarget.classList.remove('open');
 });
-document.getElementById('btnReset').onclick = () => { if (letter) loadLetter(cur); };
+document.getElementById('btnReset').onclick = () => loadLetter(cur);
 document.getElementById('btnHint').onclick = () => {
-  if (!letter) return;
   document.getElementById('celebrate').classList.remove('open');
   engine.demo();
 };
-document.getElementById('btnPrev').onclick = () => { const i = nextAvailable(cur, -1); if (i !== -1) loadLetter(i); };
-document.getElementById('btnNext').onclick = () => { const i = nextAvailable(cur, 1); if (i !== -1) loadLetter(i); };
-document.getElementById('btnNext2').onclick = () => { const i = nextAvailable(cur, 1); if (i !== -1) loadLetter(i); };
+document.getElementById('btnPrev').onclick = () => loadLetter(cur - 1);
+document.getElementById('btnNext').onclick = () => loadLetter(cur + 1);
+document.getElementById('btnNext2').onclick = () => loadLetter(cur + 1);
 
 /* ---- custom JSON loading ---- */
 const loadSheet = document.getElementById('loadSheet');
 document.getElementById('btnLoad').onclick = () => loadSheet.classList.add('open');
-document.getElementById('btnLoadHome').onclick = () => loadSheet.classList.add('open');
 document.getElementById('btnCloseLoad').onclick = () => loadSheet.classList.remove('open');
 loadSheet.addEventListener('click', e => {
   if (e.target === loadSheet) loadSheet.classList.remove('open');
@@ -502,15 +332,13 @@ document.getElementById('btnApplyJson').onclick = () => {
   try {
     const parsed = JSON.parse(txt);
     const letters = TC.normalizeDoc(parsed);
-    ALL_LETTERS = letters;
-    CATEGORIES = buildCategories(ALL_LETTERS);
-    activeCategory = null;
+    LETTERS = letters;
     engine.setBrush(TC.normalizeBrush(parsed.brush || BUILTIN_BRUSH));
     usingCustom = true;
     try { localStorage.setItem('trace_custom_data', txt); }
     catch (q) { toast('Loaded (too large to remember across reloads)'); }
     loadSheet.classList.remove('open');
-    showHome();
+    loadLetter(0);
     toast(`Loaded ${letters.length} custom letter${letters.length > 1 ? 's' : ''}`);
   } catch (err) {
     toast('Invalid JSON: ' + err.message);
@@ -518,13 +346,11 @@ document.getElementById('btnApplyJson').onclick = () => {
 };
 document.getElementById('btnBuiltin').onclick = () => {
   localStorage.removeItem('trace_custom_data');
-  ALL_LETTERS = BUILTIN;
-  CATEGORIES = buildCategories(ALL_LETTERS);
-  activeCategory = null;
+  LETTERS = BUILTIN;
   engine.setBrush(BUILTIN_BRUSH);
   usingCustom = false;
   loadSheet.classList.remove('open');
-  showHome();
+  if (LETTERS.length) loadLetter(0);
   toast('Built-in letters restored');
 };
 
@@ -537,11 +363,12 @@ function toast(msg) {
 }
 
 /* ============================ boot ============================ */
-if (!ALL_LETTERS.length) {
+if (!LETTERS.length) {
   document.body.innerHTML = '<p style="margin:40px;font-size:16px">letters.js not found or empty — run <code>node generate-strokes.cjs</code> first.</p>';
 } else {
   engine.setBrush(activeBrush);
-  showHome();
+  fit();
+  loadLetter(0);
 }
 </script>
 </body>

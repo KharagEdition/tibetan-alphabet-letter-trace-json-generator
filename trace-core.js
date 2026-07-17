@@ -83,9 +83,9 @@
 
     const out = [];
     for (const L of list) {
-      if (!L || (!L.id && !L.glyph)) continue;
+      if (!L || !Array.isArray(L.strokes)) continue;
       const strokes = [];
-      for (const s of (Array.isArray(L.strokes) ? L.strokes : [])) {
+      for (const s of L.strokes) {
         const raw = s && s.points;
         if (!Array.isArray(raw) || raw.length < 2) continue;
         const points = raw.map(p =>
@@ -95,20 +95,17 @@
         stroke.width = (s.width ? s.width * k : 70);
         strokes.push(stroke);
       }
-      // keep letters with no strokes yet (placeholders) so the UI can list
-      // them as "not traceable yet" instead of silently hiding them
+      if (!strokes.length) continue;
       out.push({
         id: L.id || L.glyph || String(out.length),
         glyph: L.glyph || L.id || '?',
         roman: L.roman || L.name || L.id || '',
         order: L.order != null ? L.order : out.length + 1,
-        category: L.category || null,
-        available: strokes.length > 0 && L.available !== false,
         outline: L.outline || null,
         strokes
       });
     }
-    if (!out.length) throw new Error('no letters found');
+    if (!out.length) throw new Error('no letters with usable strokes');
     out.sort((a, b) => (a.order || 0) - (b.order || 0));
     return out;
   }

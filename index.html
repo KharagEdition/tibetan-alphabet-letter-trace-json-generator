@@ -36,6 +36,20 @@
   button.on { border-color: var(--accent); background: #24304a; }
   button.danger { color: var(--bad); }
 
+  /* category tabs */
+  .catrow {
+    display: flex; gap: 6px; padding: 8px 10px; overflow-x: auto; flex: none;
+    border-bottom: 1px solid var(--line); scrollbar-width: thin;
+  }
+  .catrow .cb {
+    flex: none; border: 1.5px solid var(--line); background: var(--panel);
+    color: var(--muted); border-radius: 999px; font-size: 12px; font-weight: 700;
+    padding: 7px 13px; cursor: pointer; white-space: nowrap;
+  }
+  .catrow .cb .n { color: var(--muted); font-weight: 600; }
+  .catrow .cb.sel { border-color: var(--accent); background: #24304a; color: var(--text); }
+  .catrow .cb.sel .n { color: var(--accent); }
+
   /* letter rail */
   .rail {
     display: flex; gap: 4px; padding: 6px 10px; overflow-x: auto; flex: none;
@@ -149,6 +163,7 @@
   </div>
 </header>
 
+<div class="catrow" id="catRow"></div>
 <div class="rail" id="rail"></div>
 
 <div class="main">
@@ -314,6 +329,32 @@ let selA = -1;          // selected anchor index in current stroke
 let newMode = 0;        // 0 = curve, 1 = corner (line)
 let undoStack = [];
 let dragging = false;
+
+/* ---------------- categories ----------------
+   Each letter carries a `category` tag (see letters.json). `li` always
+   stays an absolute index into doc.letters — only the rail/grid/prev-next
+   are filtered to the active category, so nothing about editing or saving
+   changes. */
+const CATEGORY_DEFS = [
+  { id: 'consonant',     label: 'Consonants' },
+  { id: 'vowelSign',     label: 'Vowel Signs' },
+  { id: 'prefix',        label: 'Prefix Letters' },
+  { id: 'superscribed',  label: 'Superscribed Letters' },
+  { id: 'subscribed',    label: 'Subscribed Letters' },
+  { id: 'suffix',        label: 'Suffix Letters' },
+  { id: 'secondSuffix',  label: 'Second Suffixes' }
+];
+let activeCategory = (doc.letters[0] && doc.letters[0].category) || null;
+
+/* [{L, i}] — every letter in the active category, with its absolute
+   index into doc.letters. Falls back to ALL letters if none carry a
+   `category` (e.g. legacy/custom data). */
+function categoryEntries() {
+  const list = doc.letters
+    .map((L, i) => ({ L, i }))
+    .filter(({ L }) => L.category === activeCategory);
+  return list.length ? list : doc.letters.map((L, i) => ({ L, i }));
+}
 
 /* ---------------- distance field per letter ---------------- */
 function buildField(outline) {
@@ -950,11 +991,30 @@ document.getElementById('btnImpApply').onclick = () => {
   }
 };
 
-/* ---------------- letter rail + grid ---------------- */
+/* ---------------- category tabs + letter rail + grid ---------------- */
+function buildCatRow() {
+  const row = document.getElementById('catRow');
+  row.innerHTML = '';
+  CATEGORY_DEFS.forEach(def => {
+    const count = doc.letters.reduce((n, L) => n + (L.category === def.id ? 1 : 0), 0);
+    if (!count) return;
+    const b = document.createElement('button');
+    b.className = 'cb' + (def.id === activeCategory ? ' sel' : '');
+    b.innerHTML = `${def.label} <span class="n">${count}</span>`;
+    b.onclick = () => {
+      activeCategory = def.id;
+      const first = categoryEntries()[0];
+      buildCatRow();
+      if (first) loadLetterIdx(first.i);
+    };
+    row.appendChild(b);
+  });
+}
+
 function buildRail() {
   const rail = document.getElementById('rail');
   rail.innerHTML = '';
-  doc.letters.forEach((L, i) => {
+  categoryEntries().forEach(({ L, i }) => {
     const b = document.createElement('button');
     b.className = 'lb' + (i === li ? ' sel' : '') + (L.editedAt ? ' edited' : '');
     b.textContent = L.glyph;
@@ -969,7 +1029,7 @@ function buildRail() {
 document.getElementById('btnGrid').onclick = () => {
   const grid = document.getElementById('lgrid');
   grid.innerHTML = '';
-  doc.letters.forEach((L, i) => {
+  categoryEntries().forEach(({ L, i }) => {
     const c = document.createElement('div');
     c.className = 'lcell' + (i === li ? ' sel' : '');
     c.innerHTML = `<div class="g">${L.glyph}</div><div class="r">${L.roman || L.id}</div>` +
@@ -982,8 +1042,17 @@ document.getElementById('btnGrid').onclick = () => {
 document.getElementById('sheet').addEventListener('click', e => {
   if (e.target === document.getElementById('sheet')) e.currentTarget.classList.remove('open');
 });
-document.getElementById('btnPrev').onclick = () => loadLetterIdx(li - 1);
-document.getElementById('btnNext').onclick = () => loadLetterIdx(li + 1);
+
+function stepLetter(dir) {
+  const entries = categoryEntries();
+  const pos = entries.findIndex(e => e.i === li);
+  const n = entries.length;
+  if (!n) return;
+  const next = entries[(pos + dir + n) % n];
+  loadLetterIdx(next.i);
+}
+document.getElementById('btnPrev').onclick = () => stepLetter(-1);
+document.getElementById('btnNext').onclick = () => stepLetter(1);
 
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -996,6 +1065,7 @@ if (!window.LETTERS_DATA || !SR || !TC) {
   document.body.innerHTML = '<p style="margin:40px">letters.js / refine.js / trace-core.js missing.</p>';
 } else {
   fit();
+  buildCatRow();
   loadLetterIdx(0);
 }
 </script>

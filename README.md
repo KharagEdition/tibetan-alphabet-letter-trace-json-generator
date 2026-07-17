@@ -2,7 +2,9 @@
 
 Game-grade stroke tracing for Tibetan script, with fully automatic
 stroke-data generation from the font glyphs themselves. Letters are grouped
-into 7 categories, opened from a category picker in the tracer:
+into 7 categories; the **Stroke Studio** opens with a category tab row above
+the letter rail — pick a category to filter the rail, the "Letters" grid, and
+prev/next navigation down to just that category's letters:
 
 | Category | Count | Traceable today |
 |---|---|---|
@@ -18,14 +20,14 @@ Each category is a fully separate, independent set of letter entries — even
 where a category's letters are the same Tibetan characters as some of the
 Consonants (e.g. Prefix Letters includes "ga"), they are **not** shared or
 copied; every entry has its own `id` and its own (currently empty)
-`outline`/`strokes`. A category with 0 traceable letters still lists its
-glyphs (shown locked in the picker); open one in the **Stroke Studio** to
-draw and save its strokes, same workflow used for the Consonants. Per-category
-JSON exports live in [`categories/`](categories/) — regenerate everything
-with `node export-categories.cjs` after editing `letters.json`.
+`outline`/`strokes`. Opening a letter with no strokes yet drops you straight
+into an empty canvas in the editor, ready to draw — same workflow used for
+the Consonants. Per-category JSON exports also live in
+[`categories/`](categories/) — regenerate everything with
+`node export-categories.cjs` after editing `letters.json`.
 
-- **[Stroke Studio](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)** — edit strokes AND trace them **side by side, live**; export letters.json from the same page
-- **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)** — the standalone tracing game, opens on the category picker
+- **[Stroke Studio](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/)** — edit strokes AND trace them **side by side, live**; category tabs filter the letter list; export letters.json from the same page
+- **[Stroke Tracer](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/stroke-trace.html)** — the standalone tracing game (flat letter list, all 30 traceable Consonants)
 - **[Stroke Recorder](https://kharagedition.github.io/tibetan-alphabet-letter-trace-json-generator/recorder.html)** — optional manual recorder (legacy)
 ## Preview
 
@@ -198,14 +200,14 @@ Per stroke, the render/validate recipe is:
 
 | File | Purpose |
 |---|---|
-| `index.html` | **Stroke Studio** — anchor editor + live tracer side by side |
+| `index.html` | **Stroke Studio** — anchor editor + live tracer side by side; category tabs filter the letter list |
 | `trace-core.js` | shared tracing engine (region reveal + validation + game feel) |
 | `generate-strokes.cjs` | automatic stroke extraction (the algorithm above) |
 | `export-categories.cjs` | rebuilds `categories` in letters.json/js + `categories/*.json` from each letter's `category` tag |
 | `refine.js` | geometry primitives (path parsing, rasterizer, EDT, contours) |
 | `letters.json` / `letters.js` | letter data across 7 categories (30 consonants traceable now, others per the table above) |
 | `categories/*.json` | one self-contained JSON export per category |
-| `stroke-trace.html` | the standalone tracing game — opens on a category picker |
+| `stroke-trace.html` | the standalone tracing game — flat letter list (unchanged) |
 | `strokes-preview.svg` | QA grid of every letter's strokes (run with `--preview`) |
 | `editor.html` | redirect to the Studio (kept for old links) |
 | `recorder.html` | legacy manual stroke recorder |
