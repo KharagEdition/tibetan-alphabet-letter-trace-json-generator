@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tibetan Stroke Studio — edit & trace side by side</title>
 <style>
+  /* the Studio extracts every glyph outline from this exact font (see
+     generate-strokes.cjs / the outline-generation scripts) — load it here
+     too so rail/grid/header text matches the shapes drawn in the editor
+     instead of falling back to whatever Tibetan font the OS provides */
+  @font-face {
+    font-family: 'NotoTibetan';
+    src: url('NotoSerifTibetan-Regular.ttf') format('truetype');
+    font-weight: 400;
+  }
   :root {
     --bg: #0F1420; --panel: #1A2130; --panel-2: #222B3E; --line: #2E3950;
     --text: #EAF0FA; --muted: #8B95AB; --accent: #4F8DFD; --good: #22C55E;
@@ -22,7 +31,7 @@
     padding: 8px 14px; border-bottom: 1px solid var(--line); flex: none;
   }
   .title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-  .title .glyph { font-size: 30px; line-height: 1; }
+  .title .glyph { font-family: 'NotoTibetan', serif; font-size: 30px; line-height: 1; }
   .title .roman { font-size: 14px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
   .title .tag { font-size: 12px; color: var(--warn); font-weight: 700; white-space: nowrap; }
   button {
@@ -50,6 +59,21 @@
   .catrow .cb.sel { border-color: var(--accent); background: #24304a; color: var(--text); }
   .catrow .cb.sel .n { color: var(--accent); }
 
+  /* subcategory tabs (ra-mgo/la-mgo/sa-mgo, ya-btags/ra-btags/la-btags/wa-zur) */
+  .subcatrow {
+    display: none; gap: 6px; padding: 0 10px 8px; overflow-x: auto; flex: none;
+    border-bottom: 1px solid var(--line); scrollbar-width: thin;
+  }
+  .subcatrow.show { display: flex; }
+  .subcatrow .sb {
+    flex: none; border: 1px solid var(--line); background: transparent;
+    color: var(--muted); border-radius: 8px; font-size: 11px; font-weight: 700;
+    padding: 5px 10px; cursor: pointer; white-space: nowrap;
+  }
+  .subcatrow .sb .n { color: var(--muted); font-weight: 600; }
+  .subcatrow .sb.sel { border-color: var(--accent); background: var(--panel-2); color: var(--text); }
+  .subcatrow .sb.sel .n { color: var(--accent); }
+
   /* letter rail */
   .rail {
     display: flex; gap: 4px; padding: 6px 10px; overflow-x: auto; flex: none;
@@ -57,7 +81,8 @@
   }
   .rail .lb {
     flex: none; width: 40px; height: 44px; border: 1.5px solid var(--line);
-    background: var(--panel); border-radius: 9px; font-size: 19px; line-height: 1;
+    background: var(--panel); border-radius: 9px; font-family: 'NotoTibetan', serif;
+    font-size: 19px; line-height: 1;
     color: var(--muted); cursor: pointer; position: relative; padding: 0;
   }
   .rail .lb.sel { border-color: var(--accent); background: #24304a; color: var(--text); }
@@ -128,7 +153,7 @@
   .lcell { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
            padding: 8px 4px; text-align: center; cursor: pointer; }
   .lcell:hover, .lcell.sel { border-color: var(--accent); }
-  .lcell .g { font-size: 26px; }
+  .lcell .g { font-family: 'NotoTibetan', serif; font-size: 26px; }
   .lcell .r { font-size: 10px; color: var(--muted); font-weight: 700; }
   .lcell .e { font-size: 10px; color: var(--warn); font-weight: 700; }
 
@@ -164,6 +189,7 @@
 </header>
 
 <div class="catrow" id="catRow"></div>
+<div class="subcatrow" id="subcatRow"></div>
 <div class="rail" id="rail"></div>
 
 <div class="main">
@@ -344,16 +370,36 @@ const CATEGORY_DEFS = [
   { id: 'suffix',        label: 'Suffix Letters' },
   { id: 'secondSuffix',  label: 'Second Suffixes' }
 ];
+/* Superscribed/Subscribed each fuse into one glyph-stack with a root
+   consonant, so they're large (33/42 letters) — break them into the
+   sub-groups every Tibetan grammar reference already uses them by. */
+const SUBCATEGORY_DEFS = {
+  superscribed: [
+    { id: 'ramgo', label: 'Ra-mgo' },
+    { id: 'lamgo', label: 'La-mgo' },
+    { id: 'samgo', label: 'Sa-mgo' }
+  ],
+  subscribed: [
+    { id: 'yatags', label: 'Ya-btags' },
+    { id: 'ratags', label: 'Ra-btags' },
+    { id: 'latags', label: 'La-btags' },
+    { id: 'wazur', label: 'Wa-zur' }
+  ]
+};
 let activeCategory = (doc.letters[0] && doc.letters[0].category) || null;
+let activeSubcategory = null;
 
-/* [{L, i}] — every letter in the active category, with its absolute
-   index into doc.letters. Falls back to ALL letters if none carry a
-   `category` (e.g. legacy/custom data). */
+/* [{L, i}] — every letter in the active category (and subcategory, if the
+   category has one active), with its absolute index into doc.letters.
+   Falls back to ALL letters if none carry a `category` (e.g. legacy/custom
+   data). */
 function categoryEntries() {
-  const list = doc.letters
+  let list = doc.letters
     .map((L, i) => ({ L, i }))
     .filter(({ L }) => L.category === activeCategory);
-  return list.length ? list : doc.letters.map((L, i) => ({ L, i }));
+  if (!list.length) return doc.letters.map((L, i) => ({ L, i }));
+  if (activeSubcategory) list = list.filter(({ L }) => L.subcategory === activeSubcategory);
+  return list;
 }
 
 /* ---------------- distance field per letter ---------------- */
@@ -991,7 +1037,7 @@ document.getElementById('btnImpApply').onclick = () => {
   }
 };
 
-/* ---------------- category tabs + letter rail + grid ---------------- */
+/* ---------------- category tabs + subcategory tabs + letter rail/grid ---------------- */
 function buildCatRow() {
   const row = document.getElementById('catRow');
   row.innerHTML = '';
@@ -1003,8 +1049,34 @@ function buildCatRow() {
     b.innerHTML = `${def.label} <span class="n">${count}</span>`;
     b.onclick = () => {
       activeCategory = def.id;
+      const subs = SUBCATEGORY_DEFS[def.id];
+      activeSubcategory = subs ? subs[0].id : null;
       const first = categoryEntries()[0];
       buildCatRow();
+      buildSubcatRow();
+      if (first) loadLetterIdx(first.i);
+    };
+    row.appendChild(b);
+  });
+}
+
+function buildSubcatRow() {
+  const row = document.getElementById('subcatRow');
+  const subs = SUBCATEGORY_DEFS[activeCategory];
+  row.innerHTML = '';
+  row.classList.toggle('show', !!subs);
+  if (!subs) return;
+  subs.forEach(def => {
+    const count = doc.letters.reduce((n, L) =>
+      n + (L.category === activeCategory && L.subcategory === def.id ? 1 : 0), 0);
+    if (!count) return;
+    const b = document.createElement('button');
+    b.className = 'sb' + (def.id === activeSubcategory ? ' sel' : '');
+    b.innerHTML = `${def.label} <span class="n">${count}</span>`;
+    b.onclick = () => {
+      activeSubcategory = def.id;
+      const first = categoryEntries()[0];
+      buildSubcatRow();
       if (first) loadLetterIdx(first.i);
     };
     row.appendChild(b);
@@ -1066,6 +1138,7 @@ if (!window.LETTERS_DATA || !SR || !TC) {
 } else {
   fit();
   buildCatRow();
+  buildSubcatRow();
   loadLetterIdx(0);
 }
 </script>
