@@ -11,18 +11,32 @@ prev/next navigation down to just that category's letters:
 | Consonants | 30 | 30 |
 | Vowel Signs | 4 | 0 — glyphs listed, tracing data not added yet |
 | Prefix Letters | 5 | 0 — glyphs listed, tracing data not added yet |
-| Superscribed Letters | 3 | 0 — glyphs listed, tracing data not added yet |
-| Subscribed Letters | 4 | 0 — glyphs listed, tracing data not added yet |
+| Superscribed Letters | 33 | 0 — glyphs listed, tracing data not added yet |
+| Subscribed Letters | 42 | 0 — glyphs listed, tracing data not added yet |
 | Suffix Letters | 10 | 0 — glyphs listed, tracing data not added yet |
 | Second Suffixes | 2 | 0 — glyphs listed, tracing data not added yet |
 
-Each category is a fully separate, independent set of letter entries — even
-where a category's letters are the same Tibetan characters as some of the
-Consonants (e.g. Prefix Letters includes "ga"), they are **not** shared or
-copied; every entry has its own `id` and its own (currently empty)
-`outline`/`strokes`. Opening a letter with no strokes yet drops you straight
-into an empty canvas in the editor, ready to draw — same workflow used for
-the Consonants. Per-category JSON exports also live in
+Superscribed and Subscribed Letters list every attested consonant cluster,
+not just the 3/4 bare diacritics — e.g. Superscribed Letters includes རྐ
+(rka), རྒ (rga) … every root each of ra-mgo/la-mgo/sa-mgo legally combines
+with (33 total: 12+10+11); Subscribed Letters includes ཀྱ (kya), ཀྲ (kra) …
+every root each of ya-btags/ra-btags/la-btags/wa-zur legally combines with
+(42 total: 7+13+6+16). Prefix Letters and Suffix Letters/Second Suffixes stay
+as the bare letters, since those sit beside the root as separate letters in
+a word rather than fusing into one glyph-stack.
+
+Each category is a fully separate, independent set of letter entries with
+its own `id` — even where a category's letters are the same Tibetan
+characters as some of the Consonants (e.g. Prefix Letters includes "ga"),
+`strokes` (the actual tracing data) is **never** shared or copied and stays
+empty until filled in by hand. `outline` (just the glyph's shape, needed so
+the editor isn't a blank canvas) is populated for every letter — copied from
+the matching consonant where the character is identical, or extracted from
+the font for glyphs that don't otherwise exist (Vowel Signs, and the
+Superscribed/Subscribed consonant clusters, which are built by stacking two
+glyphs from the font). Opening any letter with no strokes yet drops you
+straight into that glyph's outline in the editor, ready to draw — same
+workflow used for the Consonants. Per-category JSON exports also live in
 [`categories/`](categories/) — regenerate everything with
 `node export-categories.cjs` after editing `letters.json`.
 
@@ -156,7 +170,7 @@ remembered across reloads until you press *Use built-in letters*.
       "order": 1,
       "category": "consonant",      // consonant | vowelSign | prefix | superscribed | subscribed | suffix | secondSuffix
       "available": true,            // false = glyph is listed but has no strokes yet
-      "outline": "M758.0 40.0 …Z",  // exact glyph outline (SVG path data); null if not available
+      "outline": "M758.0 40.0 …Z",  // exact glyph outline (SVG path data)
       "strokes": [
         {
           "points": [[283, 104.9], …],   // guide path centerline
